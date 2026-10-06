@@ -56,3 +56,5 @@ $RECYCLE.BIN/
 !.vscode/extensions.json
 .idea/
 *.swp
+
+docs
