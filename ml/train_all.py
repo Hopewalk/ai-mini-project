@@ -19,9 +19,9 @@ import time
 from datetime import datetime, timezone
 
 STEPS = {  # name -> (module, title)
-    "regression": ("ml.train_regression", "Regression — ราคาประเมิน (Poly+Ridge / HistGBR / KNN)"),
-    "classification": ("ml.train_classifier", "Classification — เกรด A/B/C (Random Forest / LogReg)"),
-    "clustering": ("ml.train_cluster", "Clustering — กลุ่มทำเล (KMeans → Ward)"),
+    "regression": ("ml.train_regression", "Regression — ราคาประเมิน (Baseline / Ridge / KNN / Random Forest)"),
+    "classification": ("ml.train_classifier", "Classification — เกรด A/B/C (Baseline / LogReg / Decision Tree / Random Forest)"),
+    "clustering": ("ml.train_cluster", "Clustering — กลุ่มทำเล (KMeans)"),
     "bayesian_network": ("ml.train_bn", "Bayesian Network — Expert DAG / HillClimb"),
 }
 ALIASES = {"reg": "regression", "clf": "classification", "cluster": "clustering", "bn": "bayesian_network"}
@@ -53,8 +53,8 @@ def summary_table(metrics):
     if "clustering" in metrics:
         k = metrics["clustering"]
         s = k["scores"][k["best_k"]] if k["best_k"] in k["scores"] else k["scores"][str(k["best_k"])]
-        rows.append(("Clustering", f"2-stage k={k['best_k']}",
-                     f"silhouette {s['two_stage_silhouette']:.3f} (KMeans {s['kmeans_silhouette']:.3f})"))
+        rows.append(("Clustering", f"KMeans k={k['best_k']}",
+                     f"silhouette {s['silhouette']:.3f}  Davies–Bouldin {s['davies_bouldin']:.3f}"))
     if "bayesian_network" in metrics:
         b = metrics["bayesian_network"]["models"]
         best = max(b, key=lambda n: b[n]["test_log_likelihood_per_row"])

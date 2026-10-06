@@ -9,7 +9,10 @@ bp = Blueprint("dashboard", __name__)
 PLOTS = {
     "regression_residuals.png": "Regression — Predicted vs Actual / Residuals",
     "classifier_confusion.png": "Classification — Confusion matrix",
-    "cluster_dendrogram.png": "Clustering — Ward dendrogram",
+    "classifier_tree.png": "Classification — Decision tree",
+    "cluster_k_selection.png": "Clustering — Elbow & silhouette",
+    "cluster_pca.png": "Clustering — PCA 2-D projection",
+    "cluster_dendrogram.png": "Clustering — Ward dendrogram (sample)",
     "cluster_map.png": "Clustering — แผนที่กลุ่มทำเล",
     "bn_dag_expert.png": "Bayesian Network — Expert DAG",
     "bn_dag_hillclimb.png": "Bayesian Network — HillClimbSearch DAG",

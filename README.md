@@ -93,8 +93,8 @@ $env:LAND_PROVINCES = "all"; pnpm train:prepare
 | `python -m ml.build_cells` | `ml/data/interim/parcels.parquet`, `cells.parquet` + รายงานการถอดรหัสระวาง |
 | `python -m ml.geo_features` | `ml/data/processed/cells_features.parquet` |
 | `python -m ml.train_regression` | `regressor.joblib`, `regression_residuals.png` |
-| `python -m ml.train_classifier` | `classifier.joblib`, `classifier_confusion.png` |
-| `python -m ml.train_cluster` | `cluster.joblib`, `cluster_dendrogram.png`, `cluster_map.png` |
+| `python -m ml.train_classifier` | `classifier.joblib`, `classifier_confusion.png`, `classifier_tree.png` |
+| `python -m ml.train_cluster` | `cluster.joblib`, `cluster_k_selection.png`, `cluster_pca.png`, `cluster_dendrogram.png`, `cluster_map.png` |
 | `python -m ml.train_bn` | `bn.joblib`, `bn_dag_expert.png`, `bn_dag_hillclimb.png` |
 | `python -m ml.train_all` | ทั้ง 4 โมเดล + `metrics.json` |
 

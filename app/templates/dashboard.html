@@ -46,7 +46,8 @@
     <div class="card h-100"><div class="card-body">
       <div class="section-title">ทายระดับราคา (สูง/กลาง/ต่ำ)</div>
       <div class="kpi-value">ถูก {{ ctest.accuracy|pct }}</div>
-      <div class="kpi-sub">ถ้าเดาสุ่มจะถูกประมาณ 33%</div>
+      {% set cdummy = c.models.get('dummy_prior') %}
+      <div class="kpi-sub">{% if cdummy %}ถ้าเดาเกรดที่พบบ่อยที่สุดทุกครั้งจะถูกแค่ {{ cdummy.test.accuracy|pct }}{% else %}ถ้าเดาสุ่มจะถูกประมาณ 33%{% endif %}</div>
     </div></div>
   </div>
   <div class="col-md-4">
@@ -153,22 +154,25 @@
     {{ importance(c.permutation_importance) }}
   </div>
   <div class="col-lg-5">
-    {% if 'classifier_confusion.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='classifier_confusion.png') }}" alt="Confusion matrix">{% endif %}
+    {% if 'classifier_confusion.png' in plots %}<img class="plot-img mb-2" src="{{ url_for('dashboard.artifact', name='classifier_confusion.png') }}" alt="Confusion matrix">{% endif %}
+  </div>
+  <div class="col-12">
+    {% if 'classifier_tree.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='classifier_tree.png') }}" alt="Decision tree">{% endif %}
   </div>
 </div>
 
 <!-- Clustering -->
-<h2 class="h6 fw-semibold mt-4">3 · Clustering — กลุ่มทำเล ({{ k.n_micro }} micro-clusters → Ward, k = {{ k.best_k }})</h2>
+<h2 class="h6 fw-semibold mt-4">3 · Clustering — กลุ่มทำเล (KMeans, k = {{ k.best_k }} เลือกจาก silhouette)</h2>
 <div class="row g-3">
   <div class="col-lg-6">
     <div class="table-responsive">
       <table class="table table-sm table-num">
-        <thead><tr><th>k</th><th class="num">Silhouette 2-stage</th><th class="num">Silhouette KMeans</th><th class="num">DB 2-stage</th><th class="num">DB KMeans</th></tr></thead>
+        <thead><tr><th>k</th><th class="num">Inertia</th><th class="num">Silhouette</th><th class="num">Davies–Bouldin</th></tr></thead>
         <tbody>
         {% for kk, s in k.scores.items() %}
           <tr class="{{ 'table-success' if kk|int == k.best_k }}"><td>{{ kk }}</td>
-            <td class="num">{{ '%.3f'|format(s.two_stage_silhouette) }}</td><td class="num">{{ '%.3f'|format(s.kmeans_silhouette) }}</td>
-            <td class="num">{{ '%.3f'|format(s.two_stage_davies_bouldin) }}</td><td class="num">{{ '%.3f'|format(s.kmeans_davies_bouldin) }}</td></tr>
+            <td class="num">{{ s.inertia|thb }}</td><td class="num">{{ '%.3f'|format(s.silhouette) }}</td>
+            <td class="num">{{ '%.3f'|format(s.davies_bouldin) }}</td></tr>
         {% endfor %}
         </tbody>
       </table>
@@ -184,9 +188,11 @@
         </tbody>
       </table>
     </div>
+    {% if 'cluster_k_selection.png' in plots %}<img class="plot-img mb-2" src="{{ url_for('dashboard.artifact', name='cluster_k_selection.png') }}" alt="Elbow and silhouette">{% endif %}
     {% if 'cluster_dendrogram.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='cluster_dendrogram.png') }}" alt="Dendrogram">{% endif %}
   </div>
   <div class="col-lg-6">
+    {% if 'cluster_pca.png' in plots %}<img class="plot-img mb-2" src="{{ url_for('dashboard.artifact', name='cluster_pca.png') }}" alt="PCA projection">{% endif %}
     {% if 'cluster_map.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='cluster_map.png') }}" alt="Cluster map">{% endif %}
   </div>
 </div>

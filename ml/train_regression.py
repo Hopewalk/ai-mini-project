@@ -1,6 +1,6 @@
 """Regression: predict appraisal price (THB / sq.wah) per cell.
 
-Compares Polynomial+Ridge, HistGradientBoosting and a lat/lon KNN baseline with spatial
+Compares a mean baseline, Linear/Polynomial Ridge, a lat/lon KNN and a Random Forest with spatial
 GroupKFold CV, then saves the best model.
 
 Usage: python -m ml.train_regression
@@ -9,7 +9,8 @@ import joblib
 import matplotlib
 import numpy as np
 from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
-from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.dummy import DummyRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import Ridge
 from sklearn.metrics import make_scorer, mean_absolute_error, r2_score, root_mean_squared_error
@@ -38,29 +39,32 @@ def _ttr(pipe):
 
 
 def candidates():
+    # baseline: always predict the mean (of log price) — every model must beat this
+    dummy = _ttr(Pipeline([("pre", make_preprocessor()), ("model", DummyRegressor(strategy="mean"))]))
     ridge = _ttr(Pipeline([
         ("pre", make_preprocessor()),
         ("poly", PolynomialFeatures(include_bias=False)),
         ("model", Ridge()),
     ]))
-    hgb = _ttr(Pipeline([
+    forest = _ttr(Pipeline([
         ("pre", make_preprocessor()),
-        ("model", HistGradientBoostingRegressor(random_state=settings.RANDOM_STATE)),
+        ("model", RandomForestRegressor(n_estimators=200, random_state=settings.RANDOM_STATE)),
     ]))
     knn = _ttr(Pipeline([
         ("pre", ColumnTransformer([("xy", "passthrough", ["lat", "lon"])])),
         ("model", KNeighborsRegressor()),
     ]))
     return {
+        "dummy_mean": (dummy, {}),
         "poly_ridge": (ridge, {
             "regressor__poly__degree": [1, 2],
             "regressor__model__alpha": np.logspace(-2, 3, 6),
         }),
-        "hist_gbr": (hgb, {
-            "regressor__model__learning_rate": [0.05, 0.1],
-            "regressor__model__max_leaf_nodes": [15, 31],
-            "regressor__model__min_samples_leaf": [10, 30],
-            "regressor__model__l2_regularization": [0.0, 1.0],
+        # bounded trees keep the saved forest small enough to serve
+        "random_forest": (forest, {
+            "regressor__model__max_depth": [15, 25],
+            "regressor__model__min_samples_leaf": [5, 20],
+            "regressor__model__max_features": [0.5, 1.0],
         }),
         "knn_latlon": (knn, {
             "regressor__model__n_neighbors": [3, 5, 10, 20],
@@ -128,13 +132,14 @@ def main():
     interval = {"q05": float(np.quantile(resid, 0.05)), "q95": float(np.quantile(resid, 0.95))}
 
     with fit_progress(len(FEATURES), "permutation importance"):
+        # few workers: each one receives a pickled copy of the model
         imp = permutation_importance(best, X_te, y_te, scoring=LOG_RMSE_SCORER, n_repeats=5,
-                                     random_state=settings.RANDOM_STATE, n_jobs=-1)
+                                     random_state=settings.RANDOM_STATE, n_jobs=2)
     importance = dict(sorted(zip(FEATURES, imp.importances_mean.round(4)), key=lambda kv: -kv[1]))
 
     plot_diagnostics(y_te.to_numpy(), best.predict(X_te), best_name, out_dir)
     joblib.dump({"model": best, "name": best_name, "log_residual_interval": interval},
-                out_dir / "regressor.joblib")
+                out_dir / "regressor.joblib", compress=3)
     metrics = {"best_model": best_name, "models": results, "log_residual_interval": interval,
                "permutation_importance": importance, "n_train": len(train), "n_test": len(test)}
     save_json(metrics, out_dir / "metrics_regression.json")

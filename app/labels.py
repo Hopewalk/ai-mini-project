@@ -39,10 +39,12 @@ RISK_VERDICT = {
 }
 
 MODEL_NAMES = {
-    "hist_gbr": "HistGradientBoosting",
-    "poly_ridge": "Polynomial + Ridge",
+    "dummy_mean": "Baseline (ทายค่าเฉลี่ย)",
+    "dummy_prior": "Baseline (ทายเกรดที่พบบ่อยสุด)",
+    "poly_ridge": "Linear / Polynomial + Ridge",
     "knn_latlon": "KNN (lat/lon)",
     "random_forest": "Random Forest",
+    "decision_tree": "Decision Tree",
     "logistic_regression": "Logistic Regression",
     "expert": "Expert DAG",
     "hill_climb_bic": "HillClimbSearch (BIC)",
