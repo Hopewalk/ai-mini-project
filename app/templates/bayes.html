@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_macros.html" import select, prob_bars with context %}
+{% block title %}Bayesian Network{% endblock %}
+
+{% block content %}
+<h1 class="h3 page-title">Bayesian Network — ถามแบบ What-if</h1>
+<p class="lead-muted mb-4">
+  เลือกตัวแปรที่อยากรู้และกำหนดเงื่อนไขที่ทราบ (evidence) ระบบคำนวณ posterior ด้วย Variable Elimination บน Expert DAG
+</p>
+
+{% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+{% else %}
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card"><div class="card-body">
+      <form method="get">
+        {{ select(form.target) }}
+        <div class="section-title mt-3">เงื่อนไขที่ทราบ</div>
+        {% for f in form.evidence_fields() %}
+          {{ select(f) }}
+        {% endfor %}
+        <button type="submit" class="btn btn-primary w-100">{{ form.submit.label.text }}</button>
+      </form>
+    </div></div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">ผลลัพธ์</div>
+      <div class="mb-2 fw-semibold">
+        P({{ labels.BN_VARIABLES[target] }}
+        {%- if evidence %} | {% for var, state in evidence.items() %}{{ labels.BN_VARIABLES[var] }}={{ labels.bn_state(var, state) }}{{ ', ' if not loop.last }}{% endfor %}{% endif %})
+      </div>
+      {% set best = result|dictsort(by='value')|last %}
+      {{ prob_bars(result, result.keys()|list, target, best[0]) }}
+
+      <div class="table-responsive mt-3">
+        <table class="table table-sm table-num mb-0">
+          <thead><tr><th>สถานะ</th><th class="num">Prior (ไม่มีเงื่อนไข)</th><th class="num">Posterior</th><th class="num">เปลี่ยน</th></tr></thead>
+          <tbody>
+          {% for state, p in result.items() %}
+            {% set d = p - prior[state] %}
+            <tr><td>{{ labels.bn_state(target, state) }}</td><td class="num">{{ prior[state]|pct(1) }}</td>
+                <td class="num">{{ p|pct(1) }}</td>
+                <td class="num {{ 'delta-pos' if d >= 0 else 'delta-neg' }}">{{ d|pp }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div></div>
+
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">ตัวอย่างคำถาม</div>
+      {% for label, url in presets %}
+        <a class="btn btn-sm btn-outline-primary sample-btn" href="{{ url }}">{{ label }}</a>
+      {% endfor %}
+      <div class="small text-muted mt-2">
+        <strong>Explaining away:</strong> เมื่อรู้ว่าราคาสูงและใช้ที่ดินแบบเมืองแล้ว ความน่าจะเป็นที่จะเป็นระวางเขตเมืองจะลดลง
+        เพราะ "การใช้ที่ดินแบบเมือง" อธิบายราคาสูงไปส่วนหนึ่งแล้ว
+      </div>
+    </div></div>
+
+    {% if structures %}
+    <div class="card"><div class="card-body">
+      <div class="section-title">โครงสร้าง DAG (เทียบบน test set)</div>
+      <div class="table-responsive">
+        <table class="table table-sm table-num">
+          <thead><tr><th>โครงสร้าง</th><th class="num">Log-likelihood/แถว</th><th class="num">Accuracy (PriceLevel)</th><th class="num">F1-macro</th></tr></thead>
+          <tbody>
+          {% for name, s in structures.items() %}
+            <tr><td>{{ labels.MODEL_NAMES.get(name, name) }}</td><td class="num">{{ '%.2f'|format(s.test_log_likelihood_per_row) }}</td>
+                <td class="num">{{ s.price_level_accuracy|pct(1) }}</td><td class="num">{{ '%.3f'|format(s.price_level_f1_macro) }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-6"><img class="plot-img" src="{{ url_for('dashboard.artifact', name='bn_dag_expert.png') }}" alt="Expert DAG"></div>
+        <div class="col-md-6"><img class="plot-img" src="{{ url_for('dashboard.artifact', name='bn_dag_hillclimb.png') }}" alt="HillClimb DAG"></div>
+      </div>
+      <div class="small text-muted mt-2">หน้านี้ใช้ Expert DAG เพราะทิศทางเส้นตีความเชิงสาเหตุได้ (ทำเล → ราคา) แม้ HillClimb จะ fit ข้อมูลดีกว่า</div>
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+{
+  "name": "land-appraisal-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frontend assets (Bootstrap, Leaflet, IBM Plex Sans Thai) + task shortcuts for the Flask app",
+  "packageManager": "pnpm@12.9.1",
+  "scripts": {
+    "postinstall": "node scripts/build-vendor.mjs",
+    "build": "node scripts/build-vendor.mjs",
+    "dev": "poetry run flask --app run run --debug",
+    "test": "poetry run pytest",
+    "train": "poetry run python -m ml.train_all",
+    "train:prepare": "poetry run python -m ml.train_all --download --prepare",
+    "load:mongo": "poetry run python -m scripts.load_mongo --parcels",
+    "docker:up": "docker compose up -d --build web",
+    "docker:down": "docker compose stop"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans-thai": "^5.3.0",
+    "bootstrap": "~5.3.8",
+    "leaflet": "~1.9.4"
+  }
+}

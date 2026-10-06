@@ -1,0 +1,33 @@
+{% macro field(f, class_='', placeholder='') -%}
+  <div class="mb-3 {{ class_ }}">
+    {{ f.label(class_='form-label') }}
+    {{ f(class_='form-control' + (' is-invalid' if f.errors else ''), placeholder=placeholder, **kwargs) }}
+    {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+  </div>
+{%- endmacro %}
+
+{% macro select(f, class_='') -%}
+  <div class="mb-3 {{ class_ }}">
+    {{ f.label(class_='form-label') }}
+    {{ f(class_='form-select' + (' is-invalid' if f.errors else '')) }}
+    {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+  </div>
+{%- endmacro %}
+
+{% macro grade_badge(grade, size='') -%}
+  {% if grade %}<span class="grade grade-{{ grade }} {{ size }}">{{ grade }}</span>{% else %}–{% endif %}
+{%- endmacro %}
+
+{# import with context: uses the `labels` global to translate BN states #}
+{% macro prob_bars(probs, order, variable=None, highlight=None) -%}
+  <div class="prob-bars">
+    {% for state in order %}
+      {% set p = probs.get(state, 0) %}
+      <div class="prob-row {{ 'is-max' if state == highlight }}">
+        <span class="prob-label">{{ labels.bn_state(variable, state) if variable else state }}</span>
+        <span class="prob-track"><span class="prob-fill" style="width: {{ (p * 100)|round(1) }}%"></span></span>
+        <span class="prob-value">{{ p|pct(1) }}</span>
+      </div>
+    {% endfor %}
+  </div>
+{%- endmacro %}

@@ -1,0 +1,49 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ML pipeline (run on demand):
+  #   docker compose run --rm ml python -m ml.train_all --download --prepare
+  #   docker compose run --rm ml python -m scripts.load_mongo
+  ml:
+    build: .
+    profiles: ["ml"]
+    command: python -m ml.train_all
+    environment:
+      MONGO_URI: mongodb://mongo:27017/landdb
+      MODEL_VERSION: ${MODEL_VERSION:-v1}
+      LAND_PROVINCES: ${LAND_PROVINCES:-}
+    volumes:
+      - ./ml/data:/app/ml/data
+      - ./ml/artifacts:/app/ml/artifacts
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URI: mongodb://mongo:27017/landdb
+      MODEL_VERSION: ${MODEL_VERSION:-v1}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+    volumes:
+      - ./ml/artifacts:/app/ml/artifacts:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:
