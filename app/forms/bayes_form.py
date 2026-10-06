@@ -12,7 +12,7 @@ class BayesQueryForm(FlaskForm):
     class Meta:
         csrf = False
 
-    target = SelectField("อยากรู้ความน่าจะเป็นของ", choices=list(BN_VARIABLES.items()), default="PriceLevel")
+    target = SelectField("หัวข้อ", choices=list(BN_VARIABLES.items()), default="PriceLevel")
     # default=ANY: fields missing from the query string must still be a valid choice
     Region = SelectField(BN_VARIABLES["Region"], default=ANY)
     CityProximity = SelectField(BN_VARIABLES["CityProximity"], default=ANY)
@@ -20,11 +20,11 @@ class BayesQueryForm(FlaskForm):
     UrbanMap = SelectField(BN_VARIABLES["UrbanMap"], default=ANY)
     Landuse = SelectField(BN_VARIABLES["Landuse"], default=ANY)
     PriceLevel = SelectField(BN_VARIABLES["PriceLevel"], default=ANY)
-    submit = SubmitField("คำนวณ")
+    submit = SubmitField("ดูผล")
 
     def set_states(self, state_names):
         for var in BN_VARIABLES:
-            getattr(self, var).choices = [(ANY, "(ไม่ระบุ)")] + [(s, bn_state(var, s)) for s in state_names[var]]
+            getattr(self, var).choices = [(ANY, "— ไม่รู้ / ไม่ระบุ —")] + [(s, bn_state(var, s)) for s in state_names[var]]
 
     def evidence_fields(self):
         return [getattr(self, var) for var in BN_VARIABLES]

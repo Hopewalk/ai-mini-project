@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% from "_macros.html" import select, prob_bars with context %}
-{% block title %}Bayesian Network{% endblock %}
+{% from "_macros.html" import select, prob_bars, tech with context %}
+{% block title %}ลองสมมติทำเล{% endblock %}
 
 {% block content %}
-<h1 class="h3 page-title">Bayesian Network — ถามแบบ What-if</h1>
+<h1 class="h3 page-title">ลองสมมติทำเล — ถ้าที่ดินเป็นแบบนี้ ราคาจะเป็นอย่างไร?</h1>
 <p class="lead-muted mb-4">
-  เลือกตัวแปรที่อยากรู้และกำหนดเงื่อนไขที่ทราบ (evidence) ระบบคำนวณ posterior ด้วย Variable Elimination บน Expert DAG
+  เลือกลักษณะทำเลที่รู้ แล้วดูว่าราคามีโอกาสอยู่ระดับไหน — หรือถามกลับกันก็ได้
+  เช่น "ถ้ารู้ว่าราคาสูง ที่ดินน่าจะอยู่ใกล้ถนนแค่ไหน?"
 </p>
 
 {% if error %}
@@ -15,58 +16,74 @@
   <div class="col-lg-4">
     <div class="card"><div class="card-body">
       <form method="get">
+        <div class="step"><span class="step-no">1</span>อยากรู้อะไร</div>
         {{ select(form.target) }}
-        <div class="section-title mt-3">เงื่อนไขที่ทราบ</div>
+        <div class="step mt-3"><span class="step-no">2</span>สิ่งที่รู้แล้ว <span class="optional">เลือกเฉพาะที่รู้</span></div>
         {% for f in form.evidence_fields() %}
           {{ select(f) }}
         {% endfor %}
-        <button type="submit" class="btn btn-primary w-100">{{ form.submit.label.text }}</button>
+        <button type="submit" class="btn btn-primary btn-lg w-100">{{ form.submit.label.text }}</button>
       </form>
     </div></div>
   </div>
 
   <div class="col-lg-8">
     <div class="card mb-3"><div class="card-body">
-      <div class="section-title">ผลลัพธ์</div>
-      <div class="mb-2 fw-semibold">
-        P({{ labels.BN_VARIABLES[target] }}
-        {%- if evidence %} | {% for var, state in evidence.items() %}{{ labels.BN_VARIABLES[var] }}={{ labels.bn_state(var, state) }}{{ ', ' if not loop.last }}{% endfor %}{% endif %})
-      </div>
+      <div class="section-title">คำตอบ</div>
       {% set best = result|dictsort(by='value')|last %}
+      <div class="mb-2">
+        {% if evidence %}
+          เมื่อ
+          {% for var, state in evidence.items() %}<span class="chip">{{ labels.BN_VARIABLES[var] }}: {{ labels.bn_state(var, state) }}</span>{% endfor %}
+        {% else %}
+          <span class="text-muted">ยังไม่ได้เลือกสิ่งที่รู้ — แสดงภาพรวมของที่ดินทั้งหมด</span>
+        {% endif %}
+      </div>
+      <div class="answer mb-3">
+        {{ labels.BN_VARIABLES[target] }} น่าจะเป็น
+        <strong>{{ labels.bn_state(target, best[0]) }}</strong>
+        <span class="text-muted">(โอกาส {{ best[1]|pct }})</span>
+      </div>
       {{ prob_bars(result, result.keys()|list, target, best[0]) }}
 
+      {% if evidence %}
       <div class="table-responsive mt-3">
         <table class="table table-sm table-num mb-0">
-          <thead><tr><th>สถานะ</th><th class="num">Prior (ไม่มีเงื่อนไข)</th><th class="num">Posterior</th><th class="num">เปลี่ยน</th></tr></thead>
+          <thead><tr><th>{{ labels.BN_VARIABLES[target] }}</th><th class="num">โดยทั่วไป</th><th class="num">เมื่อรู้เงื่อนไขข้างบน</th><th class="num">เปลี่ยนไป</th></tr></thead>
           <tbody>
           {% for state, p in result.items() %}
             {% set d = p - prior[state] %}
-            <tr><td>{{ labels.bn_state(target, state) }}</td><td class="num">{{ prior[state]|pct(1) }}</td>
-                <td class="num">{{ p|pct(1) }}</td>
-                <td class="num {{ 'delta-pos' if d >= 0 else 'delta-neg' }}">{{ d|pp }}</td></tr>
+            <tr><td>{{ labels.bn_state(target, state) }}</td><td class="num text-muted">{{ prior[state]|pct(1) }}</td>
+                <td class="num fw-semibold">{{ p|pct(1) }}</td>
+                <td class="num {{ 'delta-pos' if d >= 0 else 'delta-neg' }}">{{ d|pts }}</td></tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
+      {% endif %}
     </div></div>
 
     <div class="card mb-3"><div class="card-body">
-      <div class="section-title">ตัวอย่างคำถาม</div>
+      <div class="section-title">ลองคำถามตัวอย่าง</div>
       {% for label, url in presets %}
         <a class="btn btn-sm btn-outline-primary sample-btn" href="{{ url }}">{{ label }}</a>
       {% endfor %}
       <div class="small text-muted mt-2">
-        <strong>Explaining away:</strong> เมื่อรู้ว่าราคาสูงและใช้ที่ดินแบบเมืองแล้ว ความน่าจะเป็นที่จะเป็นระวางเขตเมืองจะลดลง
-        เพราะ "การใช้ที่ดินแบบเมือง" อธิบายราคาสูงไปส่วนหนึ่งแล้ว
+        <strong>น่าสนใจ:</strong> ถ้ารู้ว่าราคาสูง <em>และ</em> รอบ ๆ เป็นย่านเมือง โอกาสที่จะอยู่ในเขตชุมชนเมืองกลับ<em>ลดลง</em>
+        เพราะ "ย่านเมือง" อธิบายได้แล้วว่าทำไมราคาสูง (เรียกว่า <em>explaining away</em>)
       </div>
     </div></div>
 
-    {% if structures %}
-    <div class="card"><div class="card-body">
-      <div class="section-title">โครงสร้าง DAG (เทียบบน test set)</div>
+    {% call tech() %}
+      <p class="small mb-2">
+        คำนวณ P({{ labels.BN_VARIABLES[target] }}{% if evidence %} | {% for var, state in evidence.items() %}{{ labels.BN_VARIABLES[var] }}={{ labels.bn_state(var, state) }}{{ ', ' if not loop.last }}{% endfor %}{% endif %})
+        ด้วย Variable Elimination บน Bayesian Network แบบ Expert DAG ·
+        "อยู่ในเขตชุมชนเมือง" = แปลงอยู่บนระวางมาตราส่วน 1:1000 · "ลักษณะพื้นที่โดยรอบ" มาจาก OpenStreetMap
+      </p>
+      {% if structures %}
       <div class="table-responsive">
         <table class="table table-sm table-num">
-          <thead><tr><th>โครงสร้าง</th><th class="num">Log-likelihood/แถว</th><th class="num">Accuracy (PriceLevel)</th><th class="num">F1-macro</th></tr></thead>
+          <thead><tr><th>โครงสร้าง DAG</th><th class="num">Log-likelihood/แถว</th><th class="num">Accuracy (PriceLevel)</th><th class="num">F1-macro</th></tr></thead>
           <tbody>
           {% for name, s in structures.items() %}
             <tr><td>{{ labels.MODEL_NAMES.get(name, name) }}</td><td class="num">{{ '%.2f'|format(s.test_log_likelihood_per_row) }}</td>
@@ -80,8 +97,8 @@
         <div class="col-md-6"><img class="plot-img" src="{{ url_for('dashboard.artifact', name='bn_dag_hillclimb.png') }}" alt="HillClimb DAG"></div>
       </div>
       <div class="small text-muted mt-2">หน้านี้ใช้ Expert DAG เพราะทิศทางเส้นตีความเชิงสาเหตุได้ (ทำเล → ราคา) แม้ HillClimb จะ fit ข้อมูลดีกว่า</div>
-    </div></div>
-    {% endif %}
+      {% endif %}
+    {% endcall %}
   </div>
 </div>
 {% endif %}

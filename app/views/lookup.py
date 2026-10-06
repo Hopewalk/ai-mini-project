@@ -18,7 +18,8 @@ def parcel():
         found = Parcel.find(form.province.data, form.utmmap1.data, form.utmmap2.data, form.utmmap3.data,
                             form.utmmap4.data, form.land_no.data.strip())
         if found is None:
-            flash("ไม่พบแปลงที่ดินตามเลขระวาง/เลขที่ดินที่ระบุ", "warning")
+            flash("ไม่พบแปลงที่ดินตามเลขที่กรอก — ลองตรวจเลขระวาง เลขที่ดิน และจังหวัดให้ตรงกับโฉนดอีกครั้ง",
+                  "warning")
         else:
             cell = Cell.get(found["cell_id"])
             prediction = ml_service.predict_price(cell) if cell and ml_service.ready else None

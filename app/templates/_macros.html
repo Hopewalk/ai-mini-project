@@ -1,8 +1,9 @@
-{% macro field(f, class_='', placeholder='') -%}
+{% macro field(f, class_='', placeholder='', help='') -%}
   <div class="mb-3 {{ class_ }}">
     {{ f.label(class_='form-label') }}
     {{ f(class_='form-control' + (' is-invalid' if f.errors else ''), placeholder=placeholder, **kwargs) }}
     {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+    {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
   </div>
 {%- endmacro %}
 
@@ -19,15 +20,25 @@
 {%- endmacro %}
 
 {# import with context: uses the `labels` global to translate BN states #}
-{% macro prob_bars(probs, order, variable=None, highlight=None) -%}
+{# names: optional {state: label} for states that are not BN states (e.g. grades A/B/C) #}
+{% macro prob_bars(probs, order, variable=None, highlight=None, names=None) -%}
   <div class="prob-bars">
     {% for state in order %}
       {% set p = probs.get(state, 0) %}
       <div class="prob-row {{ 'is-max' if state == highlight }}">
-        <span class="prob-label">{{ labels.bn_state(variable, state) if variable else state }}</span>
+        <span class="prob-label">{{ names[state] if names else labels.bn_state(variable, state) if variable else state }}</span>
         <span class="prob-track"><span class="prob-fill" style="width: {{ (p * 100)|round(1) }}%"></span></span>
         <span class="prob-value">{{ p|pct(1) }}</span>
       </div>
     {% endfor %}
   </div>
+{%- endmacro %}
+
+{# collapsible box for model internals, closed by default so the page reads in plain language.
+   usage: {% call tech() %}...{% endcall %} #}
+{% macro tech(title='รายละเอียดทางเทคนิค (สำหรับผู้สนใจ)') -%}
+  <details class="tech">
+    <summary>{{ title }}</summary>
+    <div class="tech-body">{{ caller() }}</div>
+  </details>
 {%- endmacro %}

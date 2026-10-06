@@ -1,54 +1,62 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field, select, grade_badge %}
-{% block title %}ค้นหาแปลงที่ดิน{% endblock %}
+{% block title %}ค้นจากโฉนด{% endblock %}
 
 {% block content %}
-<h1 class="h3 page-title">ค้นหาราคาประเมินรายแปลง</h1>
-<p class="lead-muted mb-4">กรอกเลขระวางและเลขที่ดินตามโฉนด เพื่อดูราคาประเมินจริงของกรมธนารักษ์และเทียบกับค่าที่โมเดลทำนายสำหรับทำเลนั้น</p>
+<h1 class="h3 page-title">ค้นราคาประเมินจากเลขโฉนด</h1>
+<p class="lead-muted mb-4">มีโฉนดอยู่แล้ว? กรอกเลขระวางและเลขที่ดิน เพื่อดูราคาประเมินทางการของกรมธนารักษ์สำหรับที่ดินแปลงนั้น</p>
 
 {% if not form.province.choices %}
-  <div class="alert alert-warning">ยังไม่ได้โหลดข้อมูลรายแปลงเข้า MongoDB — รัน <code>python -m scripts.load_mongo --parcels</code></div>
+  <div class="alert alert-warning">ยังไม่มีข้อมูลรายแปลงในระบบ <span class="small">(ผู้ดูแล: รัน <code>python -m scripts.load_mongo --parcels</code>)</span></div>
 {% endif %}
 
 <div class="row g-4">
   <div class="col-lg-5">
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">ดูเลขได้ที่ไหน?</div>
+      <p class="small mb-2">ที่ด้านบนของหน้าโฉนดจะมีบรรทัด "ระวาง … เลขที่ดิน …" เช่น</p>
+      <div class="deed-sample">
+        ระวาง <span class="deed-part p1">5137</span> <span class="deed-part p2">IV</span>
+        <span class="deed-part p3">6888</span>-<span class="deed-part p4">15</span>
+        &nbsp; เลขที่ดิน <span class="deed-part p5">182</span>
+      </div>
+      <div class="small text-muted mt-2">สีแต่ละช่องตรงกับช่องที่ต้องกรอกด้านล่าง · ตัวอย่างนี้อยู่ใน จ.พระนครศรีอยุธยา</div>
+    </div></div>
+
     <div class="card"><div class="card-body">
       <form method="post" novalidate>
         {{ form.hidden_tag() }}
         {{ select(form.province) }}
         <div class="row g-2">
-          {{ field(form.utmmap1, 'col-7', '5137') }}
-          {{ select(form.utmmap2, 'col-5') }}
-          {{ field(form.utmmap3, 'col-7', '6888') }}
-          {{ field(form.utmmap4, 'col-5', '00') }}
+          {{ field(form.utmmap1, 'col-7 deed-field p1', '5137') }}
+          {{ select(form.utmmap2, 'col-5 deed-field p2') }}
+          {{ field(form.utmmap3, 'col-7 deed-field p3', '6888') }}
+          {{ field(form.utmmap4, 'col-5 deed-field p4', '00') }}
         </div>
-        {{ field(form.land_no, '', 'เช่น 182') }}
-        {{ form.submit(class_='btn btn-primary w-100') }}
+        {{ field(form.land_no, 'deed-field p5', 'เช่น 182') }}
+        {{ form.submit(class_='btn btn-primary btn-lg w-100') }}
       </form>
     </div></div>
-    <div class="small text-muted mt-3">
-      ตัวอย่าง: พระนครศรีอยุธยา · ระวาง 5137 IV 6888 แผ่นย่อย 15 · เลขที่ดิน 182<br>
-      เลขระวางดูได้จากหน้าโฉนด ("ระวาง ... เลขที่ดิน ...") — ระวาง 1:4000 ใช้แผ่นย่อย 00
-    </div>
   </div>
 
   <div class="col-lg-7">
     {% if result %}
       {% set pr = result.parcel %}
       {% set cell = result.cell %}
-      <div class="card"><div class="card-body">
+      <div class="card card-hero"><div class="card-body">
         <div class="section-title">ผลการค้นหา</div>
         <h2 class="h5">{{ provinces[pr.province_code] }} · ระวาง {{ pr.UTMMAP1 }} {{ ['I','II','III','IV'][pr.UTMMAP2 - 1] }} {{ pr.UTMMAP3 }}-{{ pr.UTMMAP4 }} · เลขที่ดิน {{ pr.LAND_NO }}</h2>
         <div class="row g-3 my-1">
           <div class="col-sm-6">
-            <div class="text-muted small">ราคาประเมินจริงของแปลง</div>
+            <div class="text-muted small">ราคาประเมินทางการของแปลงนี้</div>
             <div class="kpi-value">{{ pr.EVAPRICE|thb }} <span class="kpi-unit">บาท/ตร.ว.</span></div>
+            <div class="kpi-sub">หรือ {{ (pr.EVAPRICE * 400)|thb }} บาทต่อไร่</div>
           </div>
           {% if result.prediction %}
           <div class="col-sm-6">
-            <div class="text-muted small">โมเดลทำนายสำหรับทำเลนี้ (ช่อง 2×2 กม.)</div>
-            <div class="kpi-value">{{ result.prediction.predicted|thb }} <span class="kpi-unit">บาท/ตร.ว.</span></div>
-            <div class="kpi-sub">ช่วง 90%: {{ result.prediction.low|thb }} – {{ result.prediction.high|thb }}</div>
+            <div class="text-muted small">ระบบประมาณจากทำเลรอบ ๆ</div>
+            <div class="kpi-value text-muted">{{ result.prediction.predicted|thb }} <span class="kpi-unit">บาท/ตร.ว.</span></div>
+            <div class="kpi-sub">น่าจะอยู่ระหว่าง {{ result.prediction.low|thb }} – {{ result.prediction.high|thb }}</div>
           </div>
           {% endif %}
         </div>
@@ -56,15 +64,24 @@
           <hr>
           <table class="table table-sm table-num mb-3">
             <tr><td>อำเภอ/เขต</td><td class="num">{{ cell.amphoe or '–' }}</td></tr>
-            <tr><td>ช่องกริด</td><td class="num">{{ cell._id }} ({{ cell.parcel_count|thb }} แปลง)</td></tr>
-            <tr><td>Median ของช่อง (P25–P75)</td><td class="num">{{ cell.price_median|thb }} ({{ cell.price_p25|thb }}–{{ cell.price_p75|thb }})</td></tr>
-            <tr><td>เกรด / กลุ่มทำเล</td><td class="num">{{ grade_badge(cell.grade) }} {{ cell.cluster_name }}</td></tr>
-            <tr><td>มาตราส่วนระวาง</td><td class="num">1:{{ pr.UTMSCALE }}</td></tr>
+            <tr><td>ราคากลางของที่ดินรอบ ๆ</td><td class="num">{{ cell.price_median|thb }} บาท/ตร.ว.</td></tr>
+            <tr><td>ที่ดินส่วนใหญ่รอบ ๆ อยู่ระหว่าง</td><td class="num">{{ cell.price_p25|thb }} – {{ cell.price_p75|thb }} บาท/ตร.ว.</td></tr>
+            <tr><td>ระดับราคาของทำเล</td><td class="num">{{ grade_badge(cell.grade) }} {{ labels.GRADES.get(cell.grade, '') }}</td></tr>
+            <tr><td>ประเภททำเล</td><td class="num">{{ cell.cluster_name or '–' }}</td></tr>
           </table>
-          <a class="btn btn-outline-primary" href="{{ url_for('main.index', lat=pr.lat, lon=pr.lon) }}">วิเคราะห์ทำเลนี้แบบเต็ม →</a>
+          <a class="btn btn-outline-primary" href="{{ url_for('main.index', lat=pr.lat, lon=pr.lon) }}">ดูวิเคราะห์ทำเลนี้แบบละเอียด →</a>
         {% endif %}
-        <div class="small text-muted mt-3">ตำแหน่งแปลงระบุได้ระดับระวาง 1:4000 (ช่อง 2×2 กม.) ไม่ใช่ขอบเขตแปลงจริง</div>
+        <div class="small text-muted mt-3">
+          {% if cell %}"รอบ ๆ" = ที่ดิน {{ cell.parcel_count|thb }} แปลงในพื้นที่ประมาณ 2×2 กม. เดียวกัน · {% endif %}
+          ระบบรู้ตำแหน่งแปลงแค่โดยประมาณ ไม่ใช่ขอบเขตแปลงจริง
+          {% if cell %}<span class="text-nowrap">(ช่อง {{ cell._id }} · ระวาง 1:{{ pr.UTMSCALE }})</span>{% endif %}
+        </div>
       </div></div>
+    {% else %}
+      <div class="empty-state">
+        <div class="fs-1">📄</div>
+        <div>กรอกเลขจากโฉนดทางซ้าย แล้วกด "ค้นหาราคา"</div>
+      </div>
     {% endif %}
   </div>
 </div>

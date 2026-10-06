@@ -15,7 +15,7 @@
 
   coverage.forEach((c) => {
     L.circleMarker([c.lat, c.lon], { radius: 10, color: "#154d40", weight: 2, fillColor: "#9fd8c6", fillOpacity: 0.85 })
-      .bindTooltip(`${c.name}: ${LandMap.fmt(c.cells)} ช่อง — คลิกเพื่อซูม`)
+      .bindTooltip(`${c.name} — คลิกเพื่อซูม`)
       .on("click", () => map.setView([c.lat, c.lon], 10))
       .addTo(provinceLayer);
   });
@@ -33,11 +33,12 @@
       const div = L.DomUtil.create("div", "map-legend");
       let rows = [];
       if (colorBy === "grade") {
-        rows = [["A", "เกรด A — ราคาสูง"], ["B", "เกรด B — ราคากลาง"], ["C", "เกรด C — ราคาต่ำ"]]
-          .map(([g, t]) => `<i style="background:${LandMap.GRADE_COLORS[g]}"></i>${t}`);
+        rows = ["A", "B", "C"].map((g) => `<i style="background:${LandMap.GRADE_COLORS[g]}"></i>${LandMap.GRADE_NAMES[g]}`);
+        rows.unshift("<strong>ระดับราคา</strong>");
       } else if (colorBy === "cluster") {
         rows = Object.entries(clusterNames).map(([id, name]) =>
           `<i style="background:${LandMap.CLUSTER_COLORS[id % LandMap.CLUSTER_COLORS.length]}"></i>${name}`);
+        rows.unshift("<strong>ประเภททำเล</strong>");
       } else {
         let lower = 0;
         rows = PRICE_STOPS.map(([limit, color]) => {
@@ -45,7 +46,7 @@
           lower = limit;
           return `<i style="background:${color}"></i>${label}`;
         });
-        rows.unshift("<strong>บาท/ตร.ว.</strong>");
+        rows.unshift("<strong>ราคาประเมิน (บาท/ตร.ว.)</strong>");
       }
       div.innerHTML = rows.join("<br>");
       return div;
@@ -55,9 +56,10 @@
 
   function popupHtml(c) {
     return `<strong>${c.province}${c.amphoe ? " › " + c.amphoe : ""}</strong><br>
-      ราคาประเมิน (median): <strong>${LandMap.fmt(c.price)}</strong> บาท/ตร.ว.<br>
-      เกรด ${c.grade} · ${c.cluster_name || ""}<br>
-      <a href="/?lat=${c.lat.toFixed(5)}&lon=${c.lon.toFixed(5)}">วิเคราะห์ทำเลนี้ →</a>`;
+      ราคาประเมิน (ค่ากลาง): <strong>${LandMap.fmt(c.price)}</strong> บาท/ตร.ว.<br>
+      ระดับ: ${LandMap.GRADE_NAMES[c.grade] || "–"}<br>
+      ทำเล: ${c.cluster_name || "–"}<br>
+      <a href="/?lat=${c.lat.toFixed(5)}&lon=${c.lon.toFixed(5)}">ดูวิเคราะห์ละเอียด →</a>`;
   }
 
   function draw() {
@@ -73,14 +75,15 @@
       cells = [];
       draw();
       provinceLayer.addTo(map);
-      status.textContent = "ซูมเข้าไปที่จังหวัดเพื่อดูช่องข้อมูล";
+      status.textContent = "คลิกจุดสีเขียว (จังหวัดที่มีข้อมูล) หรือซูมเข้า เพื่อดูราคาแต่ละพื้นที่";
       return;
     }
     map.removeLayer(provinceLayer);
     const data = await LandMap.fetchCells(map);
     cells = data.cells;
     draw();
-    status.textContent = `แสดง ${LandMap.fmt(cells.length)} ช่อง` + (data.truncated ? " (ถูกจำกัดจำนวน — ซูมเข้าเพื่อดูครบ)" : "");
+    status.textContent = `แสดง ${LandMap.fmt(cells.length)} พื้นที่ — คลิกสี่เหลี่ยมเพื่อดูราคา`
+      + (data.truncated ? " (แสดงไม่ครบ — ซูมเข้าเพื่อดูทั้งหมด)" : "");
   }
 
   document.querySelectorAll("input[name=colorBy]").forEach((el) =>

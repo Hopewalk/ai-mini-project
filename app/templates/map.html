@@ -4,16 +4,17 @@
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
   <div>
-    <h1 class="h3 page-title">แผนที่ช่องราคาประเมิน 2×2 กม.</h1>
-    <div class="lead-muted">คลิกช่องเพื่อดูรายละเอียดและวิเคราะห์ต่อ · ซูมระดับ 8 ขึ้นไปเพื่อโหลดช่อง</div>
+    <h1 class="h3 page-title">แผนที่ราคาประเมินที่ดิน</h1>
+    <div class="lead-muted">แต่ละสี่เหลี่ยมคือพื้นที่ประมาณ 2×2 กม. — คลิกเพื่อดูราคา ·
+      ถ้ายังไม่เห็นสี่เหลี่ยม ให้คลิกจุดสีเขียวหรือซูมเข้า</div>
   </div>
-  <div class="btn-group" role="group" aria-label="ระบายสีตาม">
+  <div class="btn-group" role="group" aria-label="แสดงสีตาม">
     <input type="radio" class="btn-check" name="colorBy" id="color-grade" value="grade" checked>
-    <label class="btn btn-outline-primary" for="color-grade">ตามเกรด</label>
+    <label class="btn btn-outline-primary" for="color-grade">ระดับราคา</label>
     <input type="radio" class="btn-check" name="colorBy" id="color-cluster" value="cluster">
-    <label class="btn btn-outline-primary" for="color-cluster">ตามกลุ่มทำเล</label>
+    <label class="btn btn-outline-primary" for="color-cluster">ประเภททำเล</label>
     <input type="radio" class="btn-check" name="colorBy" id="color-price" value="price">
-    <label class="btn btn-outline-primary" for="color-price">ตามราคา</label>
+    <label class="btn btn-outline-primary" for="color-price">ราคา (บาท)</label>
   </div>
 </div>
 <div id="explore-map" class="map map-tall"></div>

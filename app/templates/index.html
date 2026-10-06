@@ -1,26 +1,36 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field %}
-{% block title %}วิเคราะห์ทำเล{% endblock %}
+{% block title %}เช็กราคาจากแผนที่{% endblock %}
 
 {% block content %}
-<h1 class="h3 page-title">วิเคราะห์ราคาประเมินที่ดินจากทำเล</h1>
-<p class="lead-muted mb-4">คลิกตำแหน่งบนแผนที่ ระบบจะทำนายราคาประเมิน จัดเกรด จัดกลุ่มทำเล และอธิบายปัจจัยด้วย Bayesian Network</p>
+<h1 class="h3 page-title">ที่ดินตรงนี้ ราคาประเมินเท่าไร?</h1>
+<p class="lead-muted mb-4">
+  คลิกตำแหน่งที่ดินบนแผนที่ แล้วกด "ดูผลวิเคราะห์" — ระบบจะประมาณราคาประเมินของรัฐ
+  บอกว่าทำเลนี้ราคาระดับไหน และอธิบายว่าอะไรทำให้ราคาสูงหรือต่ำ
+</p>
 
 <div class="row g-4">
   <div class="col-lg-8">
+    <div class="mb-2 small text-muted">ลองดูย่านตัวอย่าง:</div>
     <div class="mb-2">
       {% for name, lat, lon in samples %}
         <button type="button" class="btn btn-sm btn-outline-primary sample-btn" data-lat="{{ lat }}" data-lon="{{ lon }}">{{ name }}</button>
       {% endfor %}
     </div>
     <div id="picker-map" class="map"></div>
-    <div class="small text-muted mt-2">
-      ซูมเข้า (ระดับ 9+) เพื่อดูช่องข้อมูล 2×2 กม. ระบายสีตามเกรด ·
+    <div class="legend-inline mt-2">
+      <span><i class="dot dot-province"></i>จังหวัดที่มีข้อมูล (คลิกเพื่อซูม)</span>
+      <span>ซูมเข้าแล้วจะเห็นสีระดับราคา:</span>
+      <span><i class="sq grade-A"></i>สูง</span>
+      <span><i class="sq grade-B"></i>กลาง</span>
+      <span><i class="sq grade-C"></i>ต่ำ</span>
+    </div>
+    <div class="small text-muted mt-1">
       {% if coverage|length > 10 %}
-        ข้อมูล <strong>{{ coverage|length }} จังหวัด</strong> · {{ coverage|sum(attribute='cells')|thb }} ช่อง
+        มีข้อมูล <strong>{{ coverage|length }} จังหวัด</strong>
       {% else %}
         จังหวัดที่มีข้อมูล:
-        {% for c in coverage %}<span class="chip">{{ c.name }} ({{ c.cells|thb }} ช่อง)</span>{% endfor %}
+        {% for c in coverage %}<span class="chip">{{ c.name }}</span>{% endfor %}
       {% endif %}
     </div>
   </div>
@@ -30,29 +40,38 @@
       <div class="card-body">
         <form method="post" novalidate>
           {{ form.hidden_tag() }}
-          <div class="section-title">ตำแหน่ง</div>
-          <div class="row g-2">
-            {{ field(form.lat, 'col-6', 'คลิกแผนที่', readonly=True) }}
-            {{ field(form.lon, 'col-6', 'คลิกแผนที่', readonly=True) }}
-          </div>
 
-          <div class="section-title mt-2">เนื้อที่ (ไม่บังคับ)</div>
+          <div class="step"><span class="step-no">1</span>เลือกตำแหน่งที่ดิน</div>
+          {{ form.lat(type='hidden') }}{{ form.lon(type='hidden') }}
+          <div id="picked" class="picked {{ 'is-invalid' if form.lat.errors or form.lon.errors }}">
+            คลิกบนแผนที่ หรือเลือกย่านตัวอย่าง
+          </div>
+          {% for e in (form.lat.errors + form.lon.errors)|unique %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+
+          <div class="step mt-4"><span class="step-no">2</span>ขนาดที่ดิน <span class="optional">ถ้ารู้</span></div>
           <div class="row g-2">
             {{ field(form.area_rai, 'col-4', '0') }}
             {{ field(form.area_ngan, 'col-4', '0') }}
             {{ field(form.area_wah, 'col-4', '0') }}
           </div>
+          <div class="form-text form-text-row">1 ไร่ = 4 งาน = 400 ตารางวา · ใส่เพื่อคำนวณราคารวมทั้งแปลง</div>
 
-          <div class="section-title mt-2">ตรวจราคาเสนอขาย (ไม่บังคับ)</div>
-          {{ field(form.asking_total, '', 'เช่น 2500000') }}
+          <div class="step"><span class="step-no">3</span>ราคาที่ผู้ขายเสนอ <span class="optional">ถ้ามี</span></div>
+          {{ field(form.asking_total, '', 'เช่น 2500000', 'ระบบจะบอกว่าราคานี้แพงเกินไปไหม (ต้องใส่ขนาดที่ดินด้วย)') }}
 
-          {{ form.submit(class_='btn btn-primary w-100', disabled=not model_ready) }}
+          {{ form.submit(class_='btn btn-primary btn-lg w-100', disabled=not model_ready) }}
         </form>
       </div>
     </div>
-    <div class="small text-muted mt-3">
-      ผลวิเคราะห์ใช้ข้อมูลของช่องกริด 2×2 กม. ที่จุดนั้นตกอยู่ (หรือช่องใกล้สุดในรัศมี 5 กม.)
-    </div>
+
+    <details class="explainer mt-3">
+      <summary>"ราคาประเมิน" คืออะไร?</summary>
+      <p class="mb-2">ราคาที่ดินที่กรมธนารักษ์กำหนดไว้สำหรับแต่ละแปลง ใช้คำนวณค่าธรรมเนียมการโอนและภาษี
+        โดยทั่วไป<strong>ต่ำกว่าราคาซื้อขายจริง</strong>ในตลาด</p>
+      <p class="mb-0">เว็บนี้ดูภาพรวมของพื้นที่ประมาณ 2×2 กม. รอบจุดที่คลิก (ถนน ตัวเมือง ความหนาแน่นของชุมชน ฯลฯ)
+        ไม่ใช่ราคาของแปลงใดแปลงหนึ่ง — ถ้ามีโฉนด ใช้เมนู
+        <a href="{{ url_for('lookup.parcel') }}">ค้นจากโฉนด</a> จะได้ราคาของแปลงนั้นโดยตรง</p>
+    </details>
   </div>
 </div>
 <script id="coverage-data" type="application/json">{{ coverage|tojson }}</script>

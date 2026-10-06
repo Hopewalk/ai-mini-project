@@ -1,164 +1,224 @@
 {% extends "base.html" %}
-{% block title %}Model Dashboard{% endblock %}
+{% from "_macros.html" import tech with context %}
+{% block title %}ระบบแม่นแค่ไหน{% endblock %}
 
-{% macro importance(imp) -%}
+{% macro importance(imp, show_values=true, limit=8) -%}
   {% set items = imp|dictsort(by='value', reverse=true) %}
   {% set top = items[0][1] if items and items[0][1] > 0 else 1 %}
-  <div class="prob-bars">
-    {% for name, v in items[:8] %}
-      <div class="prob-row">
+  <div class="prob-bars wide">
+    {% for name, v in items[:limit] %}
+      <div class="prob-row {{ 'is-max' if loop.first }}">
         <span class="prob-label small">{{ labels.FEATURE_LABELS.get(name, name) }}</span>
         <span class="prob-track"><span class="prob-fill" style="width: {{ [v / top * 100, 0]|max|round(1) }}%"></span></span>
-        <span class="prob-value small">{{ '%.3f'|format(v) }}</span>
+        <span class="prob-value small">{% if show_values %}{{ '%.3f'|format(v) }}{% endif %}</span>
       </div>
     {% endfor %}
   </div>
 {%- endmacro %}
 
 {% block content %}
-<h1 class="h3 page-title">Model Dashboard</h1>
+<h1 class="h3 page-title">ระบบแม่นแค่ไหน?</h1>
 {% if not m %}
-  <div class="alert alert-warning">ยังไม่มีผลการเทรน — รัน <code>python -m ml.train_all</code></div>
+  <div class="alert alert-warning">ยังไม่มีผลการทดสอบระบบ <span class="small">(ผู้ดูแล: รัน <code>python -m ml.train_all</code>)</span></div>
 {% else %}
+{% set rbest = m.regression.models[m.regression.best_model] %}
+{% set c = m.classification %}
+{% set cbest = c.models[c.best_model] %}
+{% set ctest = cbest.test_calibrated or cbest.test %}
+{% set k = m.clustering %}
+{% set b = m.bayesian_network %}
 <p class="lead-muted mb-4">
-  Model {{ m.version }} · เทรนเมื่อ {{ m.trained_at }} · จังหวัด: {% if m.provinces == 'all' %}ทั้งประเทศ{% else %}{% for c in m.provinces %}{{ provinces[c] }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}
+  ระบบเรียนรู้จากราคาประเมินจริง {{ m.regression.n_train|thb }} พื้นที่
+  แล้วทดสอบกับอีก <strong>{{ m.regression.n_test|thb }} พื้นที่ที่ไม่เคยเห็นมาก่อน</strong>
+  ({% if m.provinces == 'all' %}ทั้งประเทศ{% else %}{% for code in m.provinces %}{{ provinces[code] }}{{ ', ' if not loop.last }}{% endfor %}{% endif %})
+  — ตัวเลขด้านล่างมาจากการทดสอบนี้
+</p>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <div class="card h-100"><div class="card-body">
+      <div class="section-title">ทายราคา</div>
+      <div class="kpi-value">±{{ '%.0f'|format(rbest.test.median_ape_pct) }}%</div>
+      <div class="kpi-sub">ครึ่งหนึ่งของพื้นที่ทดสอบ ระบบทายราคาคลาดเคลื่อนไม่เกินนี้</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100"><div class="card-body">
+      <div class="section-title">ทายระดับราคา (สูง/กลาง/ต่ำ)</div>
+      <div class="kpi-value">ถูก {{ ctest.accuracy|pct }}</div>
+      <div class="kpi-sub">ถ้าเดาสุ่มจะถูกประมาณ 33%</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100"><div class="card-body">
+      <div class="section-title">แบ่งประเภททำเล</div>
+      <div class="kpi-value">{{ k.best_k }} <span class="kpi-unit">ประเภท</span></div>
+      <div class="kpi-sub">{% for p in k.profile %}{{ p.name }}{{ ' · ' if not loop.last }}{% endfor %}</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <div class="section-title">ปัจจัยที่มีผลต่อราคามากที่สุด</div>
+      <p class="small text-muted">แถบยาว = ถ้าระบบไม่รู้ข้อมูลนี้ จะทายราคาพลาดมากขึ้น</p>
+      {{ importance(m.regression.permutation_importance, show_values=false, limit=6) }}
+    </div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <div class="section-title">ทำเลแต่ละประเภท</div>
+      <div class="table-responsive">
+        <table class="table table-sm table-num mb-0">
+          <thead><tr><th>ประเภท</th><th class="num">จำนวนพื้นที่</th><th class="num">ราคากลาง (บาท/ตร.ว.)</th><th class="num">ถึงถนนหลัก</th></tr></thead>
+          <tbody>
+          {% for p in k.profile %}
+            <tr><td>{{ p.name }}</td><td class="num">{{ p.n_cells|thb }}</td><td class="num">{{ p.price_median|thb }}</td>
+                <td class="num">{{ '%.1f'|format(p.dist_main_road_km) }} กม.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="alert alert-light border small">
+  <strong>ข้อควรรู้:</strong> ระบบดูเฉพาะลักษณะทำเลโดยรวม (ถนน ตัวเมือง ความหนาแน่นของชุมชน ฯลฯ)
+  จึงไม่รู้ปัจจัยเฉพาะแปลง เช่น ติดถนนใหญ่โดยตรง รูปแปลง หรือผังเมือง — ราคาจริงของบางแปลงจึงต่างจากที่ระบบทายได้มาก
+</div>
+
+{% call tech('ตัวเลขทางเทคนิคของทุกโมเดล (สำหรับผู้สนใจ)') %}
+<p class="small text-muted">
+  Model {{ m.version }} · เทรนเมื่อ {{ m.trained_at }}
   · Spatial split: train {{ m.regression.n_train|thb }} / test {{ m.regression.n_test|thb }} ช่อง (แบ่งตามระวาง 1:50,000)
 </p>
 
 <!-- Regression -->
-<div class="card mb-3"><div class="card-body">
-  <h2 class="h5 card-title">1 · Regression — ราคาประเมิน (บาท/ตร.ว.)</h2>
-  <div class="row g-3">
-    <div class="col-lg-7">
-      <div class="table-responsive">
-        <table class="table table-sm table-num">
-          <thead><tr><th>Model</th><th class="num">CV RMSE (log)</th><th class="num">Test RMSE (log)</th><th class="num">Test R² (log)</th><th class="num">MAE (บาท)</th><th class="num">Median APE</th></tr></thead>
-          <tbody>
-          {% for name, r in m.regression.models.items() %}
-            <tr class="{{ 'table-success' if name == m.regression.best_model }}">
-              <td>{{ labels.MODEL_NAMES.get(name, name) }}{% if name == m.regression.best_model %} ✓{% endif %}</td>
-              <td class="num">{{ '%.3f'|format(r.cv_rmse_log) }}</td><td class="num">{{ '%.3f'|format(r.test.rmse_log) }}</td>
-              <td class="num">{{ '%.3f'|format(r.test.r2_log) }}</td><td class="num">{{ r.test.mae_thb|thb }}</td>
-              <td class="num">{{ '%.1f'|format(r.test.median_ape_pct) }}%</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="small text-muted mb-3">
-        เลือกโมเดลจาก CV (ไม่ใช่ test) · ช่วงทำนาย 90% จาก out-of-fold residual:
-        ×{{ '%.2f'|format(2.718281828 ** m.regression.log_residual_interval.q05) }} ถึง ×{{ '%.2f'|format(2.718281828 ** m.regression.log_residual_interval.q95) }} ของค่าทำนาย
-      </div>
-      <div class="section-title">Permutation importance (test)</div>
-      {{ importance(m.regression.permutation_importance) }}
+<h2 class="h6 fw-semibold mt-3">1 · Regression — ราคาประเมิน (บาท/ตร.ว.)</h2>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="table-responsive">
+      <table class="table table-sm table-num">
+        <thead><tr><th>Model</th><th class="num">CV RMSE (log)</th><th class="num">Test RMSE (log)</th><th class="num">Test R² (log)</th><th class="num">MAE (บาท)</th><th class="num">Median APE</th></tr></thead>
+        <tbody>
+        {% for name, r in m.regression.models.items() %}
+          <tr class="{{ 'table-success' if name == m.regression.best_model }}">
+            <td>{{ labels.MODEL_NAMES.get(name, name) }}{% if name == m.regression.best_model %} ✓{% endif %}</td>
+            <td class="num">{{ '%.3f'|format(r.cv_rmse_log) }}</td><td class="num">{{ '%.3f'|format(r.test.rmse_log) }}</td>
+            <td class="num">{{ '%.3f'|format(r.test.r2_log) }}</td><td class="num">{{ r.test.mae_thb|thb }}</td>
+            <td class="num">{{ '%.1f'|format(r.test.median_ape_pct) }}%</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div class="col-lg-5">
-      {% if 'regression_residuals.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='regression_residuals.png') }}" alt="{{ plots['regression_residuals.png'] }}">{% endif %}
+    <div class="small text-muted mb-3">
+      เลือกโมเดลจาก CV (ไม่ใช่ test) · ช่วงทำนาย 90% จาก out-of-fold residual:
+      ×{{ '%.2f'|format(2.718281828 ** m.regression.log_residual_interval.q05) }} ถึง ×{{ '%.2f'|format(2.718281828 ** m.regression.log_residual_interval.q95) }} ของค่าทำนาย
     </div>
+    <div class="section-title">Permutation importance (test)</div>
+    {{ importance(m.regression.permutation_importance) }}
   </div>
-</div></div>
+  <div class="col-lg-5">
+    {% if 'regression_residuals.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='regression_residuals.png') }}" alt="{{ plots['regression_residuals.png'] }}">{% endif %}
+  </div>
+</div>
 
 <!-- Classification -->
-{% set c = m.classification %}
-<div class="card mb-3"><div class="card-body">
-  <h2 class="h5 card-title">2 · Classification — เกรด A/B/C</h2>
-  <div class="small text-muted mb-2">เกณฑ์จาก tertile ของ train set: C &lt; {{ c.thresholds.q33|thb }} ≤ B &lt; {{ c.thresholds.q67|thb }} ≤ A (บาท/ตร.ว.)</div>
-  <div class="row g-3">
-    <div class="col-lg-7">
-      <div class="table-responsive">
-        <table class="table table-sm table-num">
-          <thead><tr><th>Model</th><th class="num">CV F1-macro</th><th class="num">Test Accuracy</th><th class="num">Test F1-macro</th><th class="num">PR-AUC</th></tr></thead>
-          <tbody>
-          {% for name, r in c.models.items() %}
-            <tr class="{{ 'table-success' if name == c.best_model }}">
-              <td>{{ labels.MODEL_NAMES.get(name, name) }}{% if name == c.best_model %} ✓{% endif %}</td>
-              <td class="num">{{ '%.3f'|format(r.cv_f1_macro) }}</td><td class="num">{{ r.test.accuracy|pct(1) }}</td>
-              <td class="num">{{ '%.3f'|format(r.test.f1_macro) }}</td><td class="num">{{ '%.3f'|format(r.test.pr_auc_macro) }}</td>
-            </tr>
-            {% if r.test_calibrated %}
-            <tr class="small text-muted"><td>↳ หลัง isotonic calibration</td><td></td><td class="num">{{ r.test_calibrated.accuracy|pct(1) }}</td>
-              <td class="num">{{ '%.3f'|format(r.test_calibrated.f1_macro) }}</td><td class="num">{{ '%.3f'|format(r.test_calibrated.pr_auc_macro) }}</td></tr>
-            {% endif %}
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="section-title">Permutation importance (test, F1-macro)</div>
-      {{ importance(c.permutation_importance) }}
+<h2 class="h6 fw-semibold mt-4">2 · Classification — เกรด A/B/C</h2>
+<div class="small text-muted mb-2">เกณฑ์จาก tertile ของ train set: C &lt; {{ c.thresholds.q33|thb }} ≤ B &lt; {{ c.thresholds.q67|thb }} ≤ A (บาท/ตร.ว.)</div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="table-responsive">
+      <table class="table table-sm table-num">
+        <thead><tr><th>Model</th><th class="num">CV F1-macro</th><th class="num">Test Accuracy</th><th class="num">Test F1-macro</th><th class="num">PR-AUC</th></tr></thead>
+        <tbody>
+        {% for name, r in c.models.items() %}
+          <tr class="{{ 'table-success' if name == c.best_model }}">
+            <td>{{ labels.MODEL_NAMES.get(name, name) }}{% if name == c.best_model %} ✓{% endif %}</td>
+            <td class="num">{{ '%.3f'|format(r.cv_f1_macro) }}</td><td class="num">{{ r.test.accuracy|pct(1) }}</td>
+            <td class="num">{{ '%.3f'|format(r.test.f1_macro) }}</td><td class="num">{{ '%.3f'|format(r.test.pr_auc_macro) }}</td>
+          </tr>
+          {% if r.test_calibrated %}
+          <tr class="small text-muted"><td>↳ หลัง isotonic calibration</td><td></td><td class="num">{{ r.test_calibrated.accuracy|pct(1) }}</td>
+            <td class="num">{{ '%.3f'|format(r.test_calibrated.f1_macro) }}</td><td class="num">{{ '%.3f'|format(r.test_calibrated.pr_auc_macro) }}</td></tr>
+          {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div class="col-lg-5">
-      {% if 'classifier_confusion.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='classifier_confusion.png') }}" alt="Confusion matrix">{% endif %}
-    </div>
+    <div class="section-title">Permutation importance (test, F1-macro)</div>
+    {{ importance(c.permutation_importance) }}
   </div>
-</div></div>
+  <div class="col-lg-5">
+    {% if 'classifier_confusion.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='classifier_confusion.png') }}" alt="Confusion matrix">{% endif %}
+  </div>
+</div>
 
 <!-- Clustering -->
-{% set k = m.clustering %}
-<div class="card mb-3"><div class="card-body">
-  <h2 class="h5 card-title">3 · Clustering — กลุ่มทำเล ({{ k.n_micro }} micro-clusters → Ward, k = {{ k.best_k }})</h2>
-  <div class="row g-3">
-    <div class="col-lg-6">
-      <div class="table-responsive">
-        <table class="table table-sm table-num">
-          <thead><tr><th>k</th><th class="num">Silhouette 2-stage</th><th class="num">Silhouette KMeans</th><th class="num">DB 2-stage</th><th class="num">DB KMeans</th></tr></thead>
-          <tbody>
-          {% for kk, s in k.scores.items() %}
-            <tr class="{{ 'table-success' if kk|int == k.best_k }}"><td>{{ kk }}</td>
-              <td class="num">{{ '%.3f'|format(s.two_stage_silhouette) }}</td><td class="num">{{ '%.3f'|format(s.kmeans_silhouette) }}</td>
-              <td class="num">{{ '%.3f'|format(s.two_stage_davies_bouldin) }}</td><td class="num">{{ '%.3f'|format(s.kmeans_davies_bouldin) }}</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-sm table-num">
-          <thead><tr><th>กลุ่ม</th><th class="num">ช่อง</th><th class="num">Median บาท/ตร.ว.</th><th class="num">ถนนหลัก (กม.)</th><th class="num">ระวางเมือง</th></tr></thead>
-          <tbody>
-          {% for p in k.profile %}
-            <tr><td>{{ p.name }}</td><td class="num">{{ p.n_cells|thb }}</td><td class="num">{{ p.price_median|thb }}</td>
-                <td class="num">{{ '%.1f'|format(p.dist_main_road_km) }}</td><td class="num">{{ p.urban_map_share|pct }}</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% if 'cluster_dendrogram.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='cluster_dendrogram.png') }}" alt="Dendrogram">{% endif %}
+<h2 class="h6 fw-semibold mt-4">3 · Clustering — กลุ่มทำเล ({{ k.n_micro }} micro-clusters → Ward, k = {{ k.best_k }})</h2>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="table-responsive">
+      <table class="table table-sm table-num">
+        <thead><tr><th>k</th><th class="num">Silhouette 2-stage</th><th class="num">Silhouette KMeans</th><th class="num">DB 2-stage</th><th class="num">DB KMeans</th></tr></thead>
+        <tbody>
+        {% for kk, s in k.scores.items() %}
+          <tr class="{{ 'table-success' if kk|int == k.best_k }}"><td>{{ kk }}</td>
+            <td class="num">{{ '%.3f'|format(s.two_stage_silhouette) }}</td><td class="num">{{ '%.3f'|format(s.kmeans_silhouette) }}</td>
+            <td class="num">{{ '%.3f'|format(s.two_stage_davies_bouldin) }}</td><td class="num">{{ '%.3f'|format(s.kmeans_davies_bouldin) }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div class="col-lg-6">
-      {% if 'cluster_map.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='cluster_map.png') }}" alt="Cluster map">{% endif %}
+    <div class="table-responsive">
+      <table class="table table-sm table-num">
+        <thead><tr><th>กลุ่ม</th><th class="num">ช่อง</th><th class="num">Median บาท/ตร.ว.</th><th class="num">ถนนหลัก (กม.)</th><th class="num">ระวางเมือง</th></tr></thead>
+        <tbody>
+        {% for p in k.profile %}
+          <tr><td>{{ p.name }}</td><td class="num">{{ p.n_cells|thb }}</td><td class="num">{{ p.price_median|thb }}</td>
+              <td class="num">{{ '%.1f'|format(p.dist_main_road_km) }}</td><td class="num">{{ p.urban_map_share|pct }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% if 'cluster_dendrogram.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='cluster_dendrogram.png') }}" alt="Dendrogram">{% endif %}
   </div>
-</div></div>
+  <div class="col-lg-6">
+    {% if 'cluster_map.png' in plots %}<img class="plot-img" src="{{ url_for('dashboard.artifact', name='cluster_map.png') }}" alt="Cluster map">{% endif %}
+  </div>
+</div>
 
 <!-- BN -->
-{% set b = m.bayesian_network %}
-<div class="card mb-3"><div class="card-body">
-  <h2 class="h5 card-title">4 · Bayesian Network</h2>
-  <div class="row g-3">
-    <div class="col-lg-6">
-      <div class="table-responsive">
-        <table class="table table-sm table-num">
-          <thead><tr><th>DAG</th><th class="num">Log-lik/แถว</th><th class="num">Accuracy</th><th class="num">F1-macro</th></tr></thead>
-          <tbody>
-          {% for name, s in b.models.items() %}
-            <tr><td>{{ labels.MODEL_NAMES.get(name, name) }}</td><td class="num">{{ '%.2f'|format(s.test_log_likelihood_per_row) }}</td>
-                <td class="num">{{ s.price_level_accuracy|pct(1) }}</td><td class="num">{{ '%.3f'|format(s.price_level_f1_macro) }}</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="section-title">ตัวอย่าง inference</div>
-      <table class="table table-sm table-num small">
-        {% for q, dist in b.queries.items() %}
-          <tr><td><code>{{ q }}</code></td>
-              <td class="num">{% for s, pv in dist.items() %}{{ s }} {{ pv|pct(1) }}{{ ' · ' if not loop.last }}{% endfor %}</td></tr>
+<h2 class="h6 fw-semibold mt-4">4 · Bayesian Network</h2>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="table-responsive">
+      <table class="table table-sm table-num">
+        <thead><tr><th>DAG</th><th class="num">Log-lik/แถว</th><th class="num">Accuracy</th><th class="num">F1-macro</th></tr></thead>
+        <tbody>
+        {% for name, s in b.models.items() %}
+          <tr><td>{{ labels.MODEL_NAMES.get(name, name) }}</td><td class="num">{{ '%.2f'|format(s.test_log_likelihood_per_row) }}</td>
+              <td class="num">{{ s.price_level_accuracy|pct(1) }}</td><td class="num">{{ '%.3f'|format(s.price_level_f1_macro) }}</td></tr>
         {% endfor %}
+        </tbody>
       </table>
-      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('bayes.query') }}">ลองถามเอง →</a>
     </div>
-    <div class="col-lg-6">
-      {% if 'bn_dag_expert.png' in plots %}<img class="plot-img mb-2" src="{{ url_for('dashboard.artifact', name='bn_dag_expert.png') }}" alt="Expert DAG">{% endif %}
-    </div>
+    <div class="section-title">ตัวอย่าง inference</div>
+    <table class="table table-sm table-num small">
+      {% for q, dist in b.queries.items() %}
+        <tr><td><code>{{ q }}</code></td>
+            <td class="num">{% for s, pv in dist.items() %}{{ s }} {{ pv|pct(1) }}{{ ' · ' if not loop.last }}{% endfor %}</td></tr>
+      {% endfor %}
+    </table>
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('bayes.query') }}">ลองสมมติทำเลเอง →</a>
   </div>
-</div></div>
+  <div class="col-lg-6">
+    {% if 'bn_dag_expert.png' in plots %}<img class="plot-img mb-2" src="{{ url_for('dashboard.artifact', name='bn_dag_expert.png') }}" alt="Expert DAG">{% endif %}
+  </div>
+</div>
+{% endcall %}
 {% endif %}
 {% endblock %}

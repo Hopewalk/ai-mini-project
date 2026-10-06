@@ -13,9 +13,9 @@ class LocationForm(FlaskForm):
                                               NumberRange(97.3, 105.7, "ลองจิจูดต้องอยู่ในประเทศไทย (97.3–105.7)")])
     area_rai = IntegerField("ไร่", validators=[Optional(), NumberRange(0, 100_000)])
     area_ngan = IntegerField("งาน", validators=[Optional(), NumberRange(0, 3, "งานต้องอยู่ระหว่าง 0–3")])
-    area_wah = DecimalField("ตร.ว.", places=1, validators=[Optional(), NumberRange(0, 99.9, "ตร.ว. ต้องอยู่ระหว่าง 0–99.9")])
-    asking_total = FloatField("ราคาเสนอขายรวม (บาท)", validators=[Optional(), NumberRange(min=1)])
-    submit = SubmitField("วิเคราะห์ทำเล")
+    area_wah = DecimalField("ตารางวา", places=1, validators=[Optional(), NumberRange(0, 99.9, "ตารางวาต้องอยู่ระหว่าง 0–99.9")])
+    asking_total = FloatField("ราคาขายทั้งแปลง (บาท)", validators=[Optional(), NumberRange(min=1)])
+    submit = SubmitField("ดูผลวิเคราะห์")
 
     @property
     def total_wah(self):
@@ -24,4 +24,4 @@ class LocationForm(FlaskForm):
 
     def validate_asking_total(self, field):
         if field.data and self.total_wah <= 0:
-            raise ValidationError("ระบุเนื้อที่ด้วย เพื่อคำนวณราคาต่อตารางวา")
+            raise ValidationError("ระบุเนื้อที่ด้วย เพื่อเทียบราคาขายกับราคาประเมิน")

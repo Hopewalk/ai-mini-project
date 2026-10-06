@@ -9,12 +9,13 @@ from app.services.ml_service import ml_service
 bp = Blueprint("bayes", __name__)
 
 PRESETS = [
-    ("ใกล้ถนนหลัก + ระวางเมือง → ราคา?", {"target": "PriceLevel", "RoadAccess": "near", "UrbanMap": "yes"}),
-    ("ไกลถนนหลัก → ราคา?", {"target": "PriceLevel", "RoadAccess": "far"}),
-    ("ไกลตัวเมือง → ราคา?", {"target": "PriceLevel", "CityProximity": "far"}),
-    ("ราคาสูง → น่าจะอยู่ใกล้ถนนแค่ไหน? (diagnostic)", {"target": "RoadAccess", "PriceLevel": "High"}),
-    ("ราคาสูง → เป็นระวางเมืองไหม?", {"target": "UrbanMap", "PriceLevel": "High"}),
-    ("ราคาสูง + ใช้ที่ดินแบบเมือง → ระวางเมือง? (explaining away)",
+    ("ใกล้ถนนหลัก + อยู่ในเขตเมือง → ราคาจะเป็นอย่างไร?",
+     {"target": "PriceLevel", "RoadAccess": "near", "UrbanMap": "yes"}),
+    ("ไกลถนนหลัก → ราคาจะเป็นอย่างไร?", {"target": "PriceLevel", "RoadAccess": "far"}),
+    ("ไกลตัวเมือง → ราคาจะเป็นอย่างไร?", {"target": "PriceLevel", "CityProximity": "far"}),
+    ("รู้ว่าราคาสูง → น่าจะใกล้ถนนแค่ไหน?", {"target": "RoadAccess", "PriceLevel": "High"}),
+    ("รู้ว่าราคาสูง → น่าจะอยู่ในเขตเมืองไหม?", {"target": "UrbanMap", "PriceLevel": "High"}),
+    ("รู้ว่าราคาสูง + รอบ ๆ เป็นย่านเมือง → ยังต้องอยู่ในเขตเมืองไหม?",
      {"target": "UrbanMap", "PriceLevel": "High", "Landuse": "urban"}),
 ]
 

@@ -1,3 +1,5 @@
+from datetime import timedelta, timezone
+
 from dotenv import load_dotenv
 from flask import Flask
 
@@ -6,6 +8,8 @@ from app.extensions import csrf, mongo
 from app.services.ml_service import ml_service
 from config import Config
 from ml.provinces import PROVINCES
+
+TH_TZ = timezone(timedelta(hours=7))
 
 
 def create_app(test_config=None):
@@ -49,6 +53,18 @@ def _register_template_helpers(app):
     def percentage_points(value, digits=1):
         """Difference of two probabilities, in percentage points."""
         return f"{value * 100:+.{digits}f} pp"
+
+    @app.template_filter("pts")
+    def points(value, digits=1):
+        """Probability difference as plain-language percentage points ("+5.2 จุด")."""
+        return f"{value * 100:+.{digits}f} จุด"
+
+    @app.template_filter("th_time")
+    def th_time(value):
+        """Mongo returns naive UTC datetimes; show them in Thai time (UTC+7)."""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(TH_TZ).strftime("%d/%m/%Y %H:%M")
 
     @app.context_processor
     def inject_globals():

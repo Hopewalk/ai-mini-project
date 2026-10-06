@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Land Appraisal Analytics{% endblock %} · ราคาประเมินที่ดิน</title>
+  <title>{% block title %}เช็กราคาที่ดิน{% endblock %} · ราคาประเมินที่ดิน</title>
   {# vendor/ is built by `pnpm install` (scripts/build-vendor.mjs) #}
   {% for weight in [400, 500, 600, 700] %}
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/ibm-plex-sans-thai/%d.css' % weight) }}">
@@ -17,7 +17,7 @@
 <nav class="navbar navbar-expand-lg app-nav">
   <div class="container">
     <a class="navbar-brand" href="{{ url_for('main.index') }}">
-      <span class="brand-mark">◧</span> Land Appraisal Analytics
+      <span class="brand-mark">◧</span> เช็กราคาประเมินที่ดิน
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
             aria-controls="nav" aria-expanded="false" aria-label="เมนู">
@@ -26,11 +26,11 @@
     <div class="collapse navbar-collapse" id="nav">
       {% set ep = request.endpoint or '' %}
       <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('main.') }}" href="{{ url_for('main.index') }}">วิเคราะห์ทำเล</a></li>
-        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('lookup.') }}" href="{{ url_for('lookup.parcel') }}">ค้นหาแปลง</a></li>
-        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('explore.') }}" href="{{ url_for('explore.map_view') }}">แผนที่</a></li>
-        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('bayes.') }}" href="{{ url_for('bayes.query') }}">Bayesian</a></li>
-        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('dashboard.') }}" href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('main.') }}" href="{{ url_for('main.index') }}">เช็กราคาจากแผนที่</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('lookup.') }}" href="{{ url_for('lookup.parcel') }}">ค้นจากโฉนด</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('explore.') }}" href="{{ url_for('explore.map_view') }}">แผนที่ราคา</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('bayes.') }}" href="{{ url_for('bayes.query') }}">ลองสมมติทำเล</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('dashboard.') }}" href="{{ url_for('dashboard.index') }}">ระบบแม่นแค่ไหน</a></li>
         <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('history.') }}" href="{{ url_for('history.index') }}">ประวัติ</a></li>
       </ul>
     </div>
@@ -39,7 +39,7 @@
 
 <main class="container py-4">
   {% if not model_ready %}
-    <div class="alert alert-danger">ยังโหลดโมเดลไม่ได้ — รัน <code>python -m ml.train_all</code> แล้วเริ่มเว็บใหม่</div>
+    <div class="alert alert-danger">ระบบยังไม่พร้อมใช้งาน <span class="small">(ผู้ดูแล: รัน <code>python -m ml.train_all</code> แล้วเริ่มเว็บใหม่)</span></div>
   {% endif %}
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}
@@ -54,9 +54,10 @@
 
 <footer class="app-footer">
   <div class="container small">
-    ข้อมูลราคาประเมิน: กรมธนารักษ์ (Open Data Common) · แผนที่และคุณลักษณะทำเล: © OpenStreetMap contributors
-    · model {{ model_version }}
-    <div class="text-muted">ราคาประเมินของรัฐไม่ใช่ราคาซื้อขายจริง — ใช้เพื่อการศึกษา</div>
+    <div class="mb-1"><strong>หมายเหตุ:</strong> "ราคาประเมิน" คือราคาที่ดินที่กรมธนารักษ์กำหนด ใช้คิดค่าธรรมเนียมโอนและภาษี
+      มักต่ำกว่าราคาซื้อขายจริงในตลาด — ผลจากเว็บนี้เป็นการประมาณเพื่อการศึกษา ไม่ใช่ราคาทางการ</div>
+    <div class="text-muted">ข้อมูลราคาประเมิน: กรมธนารักษ์ (Open Data Common) · แผนที่: © OpenStreetMap contributors
+      · รุ่นโมเดล {{ model_version }}</div>
   </div>
 </footer>
 

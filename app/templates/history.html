@@ -4,28 +4,27 @@
 
 {% block content %}
 <h1 class="h3 page-title">ประวัติการวิเคราะห์</h1>
-<p class="lead-muted mb-4">ทั้งหมด {{ total|thb }} รายการ (เก็บใน MongoDB collection <code>predictions</code>)</p>
+<p class="lead-muted mb-4">ทำเลที่เคยวิเคราะห์ไว้ทั้งหมด {{ total|thb }} รายการ — กด "ดูผล" เพื่อเปิดดูอีกครั้ง</p>
 
 <div class="card"><div class="card-body p-0">
   <div class="table-responsive">
     <table class="table table-hover table-num mb-0 align-middle">
       <thead class="table-light">
-        <tr><th>เวลา (UTC)</th><th>ทำเล</th><th class="num">ทำนาย (บาท/ตร.ว.)</th><th>เกรด</th><th>กลุ่มทำเล</th><th>ความเสี่ยง</th><th>Model</th><th></th></tr>
+        <tr><th>วันที่/เวลา</th><th>ทำเล</th><th class="num">ราคาประเมินโดยประมาณ (บาท/ตร.ว.)</th><th>ระดับราคา</th><th>ประเภททำเล</th><th>ราคาที่ผู้ขายเสนอ</th><th></th></tr>
       </thead>
       <tbody>
       {% for it in items %}
         <tr>
-          <td class="small">{{ it.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td class="small text-nowrap">{{ it.created_at|th_time }}</td>
           <td>{{ it.location.province_name }}{% if it.location.amphoe %} › {{ it.location.amphoe }}{% endif %}</td>
           <td class="num">{{ it.regression.predicted|thb }}</td>
           <td>{{ grade_badge(it.classification.grade) }}</td>
           <td class="small">{{ it.cluster.name }}</td>
           <td>{% if it.asking %}<span class="risk risk-{{ it.asking.risk }}">{{ labels.RISK[it.asking.risk] }}</span>{% else %}–{% endif %}</td>
-          <td class="small text-muted">{{ it.model_version }}</td>
-          <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('main.result', prediction_id=it._id) }}">ดู</a></td>
+          <td><a class="btn btn-sm btn-outline-primary text-nowrap" href="{{ url_for('main.result', prediction_id=it._id) }}" title="รุ่นโมเดล {{ it.model_version }}">ดูผล</a></td>
         </tr>
       {% else %}
-        <tr><td colspan="8" class="text-center text-muted py-4">ยังไม่มีประวัติ — <a href="{{ url_for('main.index') }}">เริ่มวิเคราะห์ทำเล</a></td></tr>
+        <tr><td colspan="7" class="text-center text-muted py-4">ยังไม่มีประวัติ — <a href="{{ url_for('main.index') }}">เริ่มเช็กราคาที่ดิน</a></td></tr>
       {% endfor %}
       </tbody>
     </table>

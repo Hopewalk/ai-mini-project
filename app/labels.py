@@ -1,20 +1,21 @@
-"""Thai display labels for model variables and states."""
+"""Thai display labels for model variables and states — worded for non-technical users."""
 
 BN_VARIABLES = {
     "Region": "ภูมิภาค",
-    "CityProximity": "ระยะถึงตัวเมือง",
+    "CityProximity": "ระยะห่างจากตัวเมือง",
     "RoadAccess": "ระยะถึงถนนสายหลัก",
-    "UrbanMap": "ระวางเขตเมือง (1:1000)",
-    "Landuse": "การใช้ที่ดิน (OSM)",
-    "PriceLevel": "ระดับราคา",
+    "UrbanMap": "อยู่ในเขตชุมชนเมือง",
+    "Landuse": "ลักษณะพื้นที่โดยรอบ",
+    "PriceLevel": "ระดับราคาที่ดิน",
 }
 
 BN_STATES = {
     "CityProximity": {"near": "ใกล้ (<5 กม.)", "mid": "ปานกลาง (5–20 กม.)", "far": "ไกล (>20 กม.)"},
     "RoadAccess": {"near": "ใกล้ (<1 กม.)", "mid": "ปานกลาง (1–5 กม.)", "far": "ไกล (>5 กม.)"},
     "UrbanMap": {"yes": "ใช่", "no": "ไม่ใช่"},
-    "Landuse": {"urban": "เมือง", "agri": "เกษตรกรรม", "forest": "ป่า/พื้นที่ธรรมชาติ", "unmapped": "ไม่มีข้อมูล"},
-    "PriceLevel": {"Low": "ต่ำ (C)", "Mid": "กลาง (B)", "High": "สูง (A)"},
+    "Landuse": {"urban": "ย่านเมือง/ชุมชน", "agri": "ไร่นา/เกษตรกรรม", "forest": "ป่า/พื้นที่ธรรมชาติ",
+                "unmapped": "ไม่มีข้อมูล"},
+    "PriceLevel": {"Low": "ราคาต่ำ (C)", "Mid": "ราคากลาง (B)", "High": "ราคาสูง (A)"},
     "Region": {
         "Central": "ภาคกลาง", "East": "ภาคตะวันออก", "Northeast-Lower": "อีสานล่าง",
         "Northeast-Upper": "อีสานบน", "North-Upper": "ภาคเหนือตอนบน", "North-Lower": "ภาคเหนือตอนล่าง",
@@ -22,9 +23,20 @@ BN_STATES = {
     },
 }
 
-GRADES = {"A": "เกรด A — ราคาสูง", "B": "เกรด B — ราคากลาง", "C": "เกรด C — ราคาต่ำ"}
+GRADES = {"A": "ราคาสูง", "B": "ราคากลาง", "C": "ราคาต่ำ"}
+GRADE_HINTS = {
+    "A": "แพงกว่าพื้นที่ส่วนใหญ่ — อยู่ในกลุ่ม 1 ใน 3 ที่ราคาสูงที่สุด",
+    "B": "ราคาระดับกลาง เมื่อเทียบกับพื้นที่อื่น",
+    "C": "ถูกกว่าพื้นที่ส่วนใหญ่ — อยู่ในกลุ่ม 1 ใน 3 ที่ราคาต่ำที่สุด",
+}
+GRADE_SHORT = {"A": "ราคาสูง (A)", "B": "ราคากลาง (B)", "C": "ราคาต่ำ (C)"}
 
-RISK = {"Low": "ต่ำ", "Medium": "ปานกลาง", "High": "สูง"}
+RISK = {"Low": "ปกติ", "Medium": "ค่อนข้างแพง", "High": "แพงมาก"}
+RISK_VERDICT = {
+    "Low": "ราคาที่เสนออยู่ในเกณฑ์ปกติ",
+    "Medium": "ราคาที่เสนอค่อนข้างแพง — ควรต่อรองหรือหาข้อมูลเพิ่ม",
+    "High": "ราคาที่เสนอแพงกว่าราคาประเมินมาก — ควรระวัง",
+}
 
 MODEL_NAMES = {
     "hist_gbr": "HistGradientBoosting",
@@ -44,17 +56,17 @@ FEATURE_LABELS = {
     "dist_rail_station_km": "ระยะถึงสถานีรถไฟ/รถไฟฟ้า (กม.)",
     "dist_beach_km": "ระยะถึงชายหาด (กม.)",
     "dist_bangkok_km": "ระยะถึงกรุงเทพฯ (กม.)",
-    "road_km": "ความยาวถนนในช่อง (กม.)",
-    "poi_count": "จำนวนสถานที่สำคัญ (POI)",
-    "building_count": "จำนวนอาคาร (OSM)",
+    "road_km": "ความยาวถนนรวมในพื้นที่ (กม.)",
+    "poi_count": "จำนวนร้านค้า/สถานที่สำคัญ",
+    "building_count": "จำนวนอาคาร",
     "parcel_count": "จำนวนแปลงที่ดิน",
-    "urban_map_share": "สัดส่วนระวางเขตเมือง",
-    "landuse_urban_share": "สัดส่วนพื้นที่เมือง",
+    "urban_map_share": "สัดส่วนที่ดินในเขตชุมชนเมือง",
+    "landuse_urban_share": "สัดส่วนพื้นที่ย่านเมือง",
     "landuse_agri_share": "สัดส่วนพื้นที่เกษตร",
     "landuse_forest_share": "สัดส่วนพื้นที่ป่า",
     "region": "ภูมิภาค",
-    "lat": "ละติจูด",
-    "lon": "ลองจิจูด",
+    "lat": "ตำแหน่งเหนือ–ใต้ (ละติจูด)",
+    "lon": "ตำแหน่งตะวันออก–ตะวันตก (ลองจิจูด)",
 }
 
 

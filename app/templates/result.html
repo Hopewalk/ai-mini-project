@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% from "_macros.html" import grade_badge, prob_bars with context %}
+{% from "_macros.html" import grade_badge, prob_bars, tech with context %}
 {% block title %}ผลวิเคราะห์ทำเล{% endblock %}
 
 {% set loc = p.location %}
 {% set reg = p.regression %}
 {% set clf = p.classification %}
 {% set bn = p.bayes %}
+{% set f = loc.features %}
 
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
@@ -14,170 +15,195 @@
     <h1 class="h3 page-title">
       {{ loc.province_name }}{% if loc.amphoe %} › {{ loc.amphoe }}{% endif %}{% if loc.tambon %} › {{ loc.tambon }}{% endif %}
     </h1>
-    <div class="text-muted small">
-      จุดที่เลือก {{ '%.5f'|format(p.input.lat) }}, {{ '%.5f'|format(p.input.lon) }} · ช่อง {{ loc.cell_id }}
-      · {{ p.created_at.strftime('%d/%m/%Y %H:%M') }} UTC · model {{ p.model_version }}
-    </div>
+    <div class="text-muted small">วิเคราะห์เมื่อ {{ p.created_at|th_time }} น.</div>
     {% if not loc.exact %}
       <div class="alert alert-info py-1 px-2 mt-2 mb-0 small">
-        จุดที่เลือกไม่มีข้อมูลโดยตรง — ใช้ช่องที่ใกล้ที่สุด ห่าง {{ '%.1f'|format(loc.distance_km) }} กม.
+        ตรงจุดที่เลือกไม่มีข้อมูล จึงใช้ข้อมูลพื้นที่ที่ใกล้ที่สุด ห่างออกไป {{ '%.1f'|format(loc.distance_km) }} กม.
       </div>
     {% endif %}
   </div>
-  <a class="btn btn-outline-primary" href="{{ url_for('main.index', lat=p.input.lat, lon=p.input.lon) }}">วิเคราะห์จุดอื่น</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('main.index', lat=p.input.lat, lon=p.input.lon) }}">← เลือกจุดอื่น</a>
 </div>
 
-<!-- KPIs -->
 <div class="row g-3 mb-3">
-  <div class="col-md-5">
-    <div class="card h-100"><div class="card-body">
-      <div class="section-title">ราคาประเมินที่ทำนาย · {{ labels.MODEL_NAMES.get(reg.model, reg.model) }}</div>
-      <div class="kpi-value">{{ reg.predicted|thb }} <span class="kpi-unit">บาท/ตร.ว.</span></div>
-      <div class="kpi-sub">ช่วง 90%: {{ reg.low|thb }} – {{ reg.high|thb }}</div>
+  <!-- price -->
+  <div class="col-lg-7">
+    <div class="card h-100 card-hero"><div class="card-body">
+      <div class="section-title">ราคาประเมินโดยประมาณ</div>
+      <div class="kpi-value">{{ reg.predicted|thb }} <span class="kpi-unit">บาท ต่อตารางวา</span></div>
+      <div class="kpi-sub">หรือประมาณ {{ (reg.predicted * 400)|thb }} บาทต่อไร่</div>
+      <div class="mt-2">น่าจะอยู่ระหว่าง <strong>{{ reg.low|thb }} – {{ reg.high|thb }}</strong> บาท/ตร.ว.</div>
+
+      {% if p.input.area_wah %}
+        <div class="total-box mt-3">
+          ที่ดิน {{ p.input.area_wah|thb(1) }} ตร.ว. → ราคาประเมินรวมประมาณ
+          <strong class="fs-5">{{ (reg.predicted * p.input.area_wah)|thb }} บาท</strong>
+        </div>
+      {% endif %}
+
       {% if reg.actual_median %}
         <hr>
-        <div class="d-flex justify-content-between">
-          <span>ราคาประเมินจริง (median ของช่อง)</span>
-          <strong>{{ reg.actual_median|thb }}</strong>
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+          <span>ราคาประเมินจริงของกรมธนารักษ์ในพื้นที่นี้ (ค่ากลาง)</span>
+          <strong>{{ reg.actual_median|thb }} บาท/ตร.ว.</strong>
         </div>
-        <div class="d-flex justify-content-between small text-muted">
-          <span>ช่วง P25–P75 ในช่อง</span><span>{{ reg.actual_p25|thb }} – {{ reg.actual_p75|thb }}</span>
-        </div>
-        <div class="d-flex justify-content-between small mt-1">
-          <span>จริง เทียบ ทำนาย</span>
-          <span class="{{ 'delta-pos' if reg.diff_pct >= 0 else 'delta-neg' }}">{{ reg.diff_pct|signed_pct }}</span>
-        </div>
-        <div class="small text-muted mt-1">
-          {% if reg.diff_pct > 0.5 %}ราคาประเมินจริงสูงกว่าที่คุณลักษณะทำเลบ่งชี้ — อาจมีปัจจัยที่โมเดลไม่เห็น (เช่น ติดถนนสายหลักโดยตรง ผังเมือง)
-          {% elif reg.diff_pct < -0.33 %}ราคาประเมินจริงต่ำกว่าที่คุณลักษณะทำเลบ่งชี้
-          {% else %}ราคาประเมินจริงสอดคล้องกับคุณลักษณะทำเล{% endif %}
+        <div class="small text-muted">ที่ดินส่วนใหญ่ในพื้นที่นี้อยู่ระหว่าง {{ reg.actual_p25|thb }} – {{ reg.actual_p75|thb }} บาท/ตร.ว.</div>
+        <div class="small mt-2">
+          {% if reg.diff_pct > 0.5 %}
+            ราคาจริง<span class="delta-pos fw-semibold">สูงกว่า</span>ที่ระบบคาดจากทำเล {{ reg.diff_pct|pct }}
+            — อาจมีปัจจัยที่ระบบมองไม่เห็น เช่น ติดถนนใหญ่โดยตรง หรือผังเมือง
+          {% elif reg.diff_pct < -0.33 %}
+            ราคาจริง<span class="delta-neg fw-semibold">ต่ำกว่า</span>ที่ระบบคาดจากทำเล {{ (-reg.diff_pct)|pct }}
+          {% else %}
+            ✓ ราคาจริงใกล้เคียงกับที่ระบบคาดจากทำเล
+          {% endif %}
         </div>
       {% endif %}
     </div></div>
   </div>
 
-  <div class="col-md-4">
+  <!-- grade -->
+  <div class="col-lg-5">
     <div class="card h-100"><div class="card-body">
-      <div class="section-title">เกรดทำเล · {{ labels.MODEL_NAMES.get(clf.model, clf.model) }}</div>
+      <div class="section-title">ทำเลนี้ราคาระดับไหน</div>
       <div class="d-flex align-items-center gap-3 mb-3">
         {{ grade_badge(clf.grade, 'lg') }}
         <div>
-          <div class="fw-semibold">{{ labels.GRADES[clf.grade] }}</div>
-          <div class="small text-muted">เกรดจริงของช่อง: {{ grade_badge(clf.actual_grade) }}</div>
+          <div class="fs-5 fw-semibold">{{ labels.GRADES[clf.grade] }}</div>
+          <div class="small text-muted">{{ labels.GRADE_HINTS[clf.grade] }}</div>
         </div>
       </div>
-      {{ prob_bars(clf.proba, ['A', 'B', 'C'], highlight=clf.grade) }}
+      <div class="small text-muted mb-1">ความมั่นใจของระบบ</div>
+      {{ prob_bars(clf.proba, ['A', 'B', 'C'], highlight=clf.grade, names=labels.GRADE_SHORT) }}
+      {% if clf.actual_grade %}
+        <div class="small text-muted mt-2">
+          ระดับจริงจากข้อมูลกรมธนารักษ์: {{ grade_badge(clf.actual_grade) }} {{ labels.GRADES[clf.actual_grade] }}
+          {% if clf.actual_grade == clf.grade %}✓ ตรงกัน{% endif %}
+        </div>
+      {% endif %}
     </div></div>
   </div>
+</div>
 
-  <div class="col-md-3">
+<div class="row g-3 mb-3">
+  {% if p.asking %}
+    {% set a = p.asking %}
+    <div class="col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <div class="section-title">ราคาที่ผู้ขายเสนอ แพงไปไหม?</div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="risk risk-{{ a.risk }}">{{ labels.RISK[a.risk] }}</span>
+          <span class="fw-semibold">{{ labels.RISK_VERDICT[a.risk] }}</span>
+        </div>
+        <p class="mb-2">ราคาที่เสนอ<strong>สูงเป็น {{ '%.1f'|format(a.ratio_to_predicted) }} เท่า</strong>ของราคาประเมินโดยประมาณ</p>
+        <table class="table table-sm table-num mb-2">
+          <tr><td>ราคาที่ผู้ขายเสนอ (ทั้งแปลง)</td><td class="num">{{ a.asking_total|thb }} บาท</td></tr>
+          <tr><td>ราคาประเมินโดยประมาณ (ทั้งแปลง)</td><td class="num">{{ a.appraisal_total_predicted|thb }} บาท</td></tr>
+          <tr><td>ขนาดที่ดิน</td><td class="num">{{ p.input.area_wah|thb(1) }} ตร.ว.</td></tr>
+          <tr><td>ราคาที่เสนอ ต่อตารางวา</td><td class="num">{{ a.asking_per_wah|thb }} บาท</td></tr>
+          {% if a.ratio_to_actual %}
+          <tr><td>เทียบกับราคาประเมินจริงในพื้นที่</td><td class="num">{{ '%.1f'|format(a.ratio_to_actual) }} เท่า</td></tr>
+          {% endif %}
+        </table>
+        <div class="small text-muted">
+          ราคาซื้อขายจริงมักสูงกว่าราคาประเมินของรัฐอยู่แล้ว ระบบจึงถือว่า
+          ไม่ถึง {{ a.thresholds.medium|int }} เท่า = ปกติ, {{ a.thresholds.medium|int }}–{{ a.thresholds.high|int }} เท่า = ค่อนข้างแพง,
+          ตั้งแต่ {{ a.thresholds.high|int }} เท่า = แพงมาก — ใช้เป็นสัญญาณเบื้องต้นเท่านั้น
+        </div>
+      </div></div>
+    </div>
+  {% endif %}
+
+  <div class="{{ 'col-lg-6' if p.asking else 'col-12' }}">
     <div class="card h-100"><div class="card-body">
-      <div class="section-title">กลุ่มทำเล · KMeans → Ward</div>
-      <div class="fs-5 fw-semibold mb-2">{{ p.cluster.name }}</div>
-      <div class="small text-muted">Cluster {{ p.cluster.id }}</div>
-      <hr>
-      <div class="small">
-        ถนนสายหลัก {{ '%.1f'|format(loc.features.dist_main_road_km) }} กม.<br>
-        ตัวเมือง/อำเภอ {{ '%.1f'|format(loc.features.dist_town_km) }} กม.<br>
-        ระวางเขตเมือง {{ loc.features.urban_map_share|pct }}
+      <div class="section-title">ทำเลแบบไหน</div>
+      <div class="fs-5 fw-semibold mb-3">{{ p.cluster.name }}</div>
+      <div class="facts">
+        <div><span class="fact-value">{{ '%.1f'|format(f.dist_main_road_km) }} กม.</span><span class="fact-label">ถึงถนนสายหลัก</span></div>
+        <div><span class="fact-value">{{ '%.1f'|format(f.dist_town_km) }} กม.</span><span class="fact-label">ถึงตัวเมือง/อำเภอ</span></div>
+        <div><span class="fact-value">{{ f.urban_map_share|pct }}</span><span class="fact-label">ของที่ดินอยู่ในเขตชุมชนเมือง</span></div>
+        {% if f.poi_count is not none %}
+        <div><span class="fact-value">{{ f.poi_count|thb }}</span><span class="fact-label">ร้านค้า/สถานที่สำคัญในพื้นที่</span></div>
+        {% endif %}
       </div>
     </div></div>
   </div>
 </div>
 
 <div class="row g-3 mb-3">
-  <!-- Bayesian -->
+  <!-- Bayesian explanation -->
   <div class="col-lg-7">
     <div class="card h-100"><div class="card-body">
-      <div class="section-title">Bayesian Network — ปัจจัยที่อธิบายระดับราคา</div>
-      <div class="mb-2">
+      <div class="section-title">อะไรทำให้ราคาที่นี่สูงหรือต่ำ</div>
+      <div class="small text-muted mb-1">ลักษณะของทำเลนี้:</div>
+      <div class="mb-3">
         {% for var, state in bn.evidence.items() %}
           <span class="chip">{{ labels.BN_VARIABLES[var] }}: {{ labels.bn_state(var, state) }}</span>
         {% endfor %}
       </div>
+
       {% set best = bn.posterior|dictsort(by='value')|last %}
-      <div class="fw-semibold mb-1">P(ระดับราคา | ปัจจัยของทำเลนี้)</div>
+      <div class="fw-semibold mb-1">จากลักษณะเหล่านี้ โอกาสที่ราคาจะอยู่แต่ละระดับ</div>
       {{ prob_bars(bn.posterior, ['High', 'Mid', 'Low'], 'PriceLevel', best[0]) }}
 
+      {% set base_high = bn.posterior.High %}
       {% if bn.impacts %}
         {% set top = bn.impacts[0] %}
         <div class="alert alert-light border mt-3 mb-3 py-2">
-          <strong>ปัจจัยหลัก:</strong> {{ labels.BN_VARIABLES[top.variable] }} = {{ labels.bn_state(top.variable, top.state) }}
-          — ทำให้ P(ราคาสูง) เปลี่ยน
-          <span class="{{ 'delta-pos' if top.delta >= 0 else 'delta-neg' }}">{{ top.delta|pp }}</span>
-          เทียบกับกรณีไม่รู้ปัจจัยนี้
+          <strong>ปัจจัยที่มีผลมากที่สุด:</strong>
+          {{ labels.BN_VARIABLES[top.variable] }} = {{ labels.bn_state(top.variable, top.state) }}<br>
+          <span class="small">
+            ทำให้โอกาสราคาสูง{{ 'เพิ่มขึ้น' if top.delta >= 0 else 'ลดลง' }}
+            จาก {{ (base_high - top.delta)|pct }} เป็น
+            <strong class="{{ 'delta-pos' if top.delta >= 0 else 'delta-neg' }}">{{ base_high|pct }}</strong>
+          </span>
         </div>
       {% endif %}
 
-      <div class="fw-semibold mb-1">What-if: ถ้าเงื่อนไขเปลี่ยน P(ราคาสูง) จะเป็นเท่าไร</div>
+      {% if bn.what_if %}
+      <div class="fw-semibold mb-1">ถ้าทำเลเปลี่ยนไป โอกาสที่ราคาจะสูงเป็นเท่าไร?</div>
       <div class="table-responsive">
         <table class="table table-sm table-num mb-0">
-          <thead><tr><th>ปัจจัย</th><th>จาก → เป็น</th><th class="num">P(สูง)</th><th class="num">เปลี่ยน</th></tr></thead>
+          <thead><tr><th>ถ้า…</th><th>เปลี่ยนเป็น</th><th class="num">โอกาสราคาสูง</th></tr></thead>
           <tbody>
           {% for w in bn.what_if %}
             <tr>
               <td>{{ labels.BN_VARIABLES[w.variable] }}</td>
-              <td>{{ labels.bn_state(w.variable, w.current) }} → {{ labels.bn_state(w.variable, w.state) }}</td>
-              <td class="num">{{ w.p_high|pct(1) }}</td>
-              <td class="num {{ 'delta-pos' if w.delta >= 0 else 'delta-neg' }}">{{ w.delta|pp }}</td>
+              <td>{{ labels.bn_state(w.variable, w.state) }} <span class="text-muted small">(ตอนนี้: {{ labels.bn_state(w.variable, w.current) }})</span></td>
+              <td class="num text-nowrap">
+                <span class="text-muted">{{ base_high|pct }}</span> →
+                <strong class="{{ 'delta-pos' if w.delta > 0.0005 else 'delta-neg' if w.delta < -0.0005 }}">{{ w.p_high|pct }}</strong>
+              </td>
             </tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
+      {% endif %}
       {% if 'CityProximity' in bn.get('no_effect', []) %}
         <div class="small text-muted mt-2">
-          ระยะถึงตัวเมืองไม่เปลี่ยน P(สูง) เพราะใน DAG ตัวแปรนี้ส่งผลต่อราคาผ่าน ถนน/ระวาง/การใช้ที่ดิน เท่านั้น
-          เมื่อรู้ค่าทั้งสามแล้ว ตัวแปรนี้จึงไม่ให้ข้อมูลเพิ่ม (d-separation)
+          ระยะห่างจากตัวเมืองไม่ทำให้ผลเปลี่ยน เพราะระบบรู้ระยะถนน เขตเมือง และลักษณะพื้นที่แล้ว
+          ซึ่งเป็นช่องทางที่ระยะถึงเมืองส่งผลต่อราคาอยู่แล้ว
         </div>
       {% endif %}
     </div></div>
   </div>
 
+  <!-- neighbours -->
   <div class="col-lg-5">
-    {% if p.asking %}
-      {% set a = p.asking %}
-      <div class="card mb-3"><div class="card-body">
-        <div class="section-title">ตรวจราคาเสนอขาย</div>
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <span>ความเสี่ยงราคาสูงเกินจริง</span>
-          <span class="risk risk-{{ a.risk }}">{{ labels.RISK[a.risk] }}</span>
-        </div>
-        <table class="table table-sm table-num mb-2">
-          <tr><td>ราคาเสนอขายรวม</td><td class="num">{{ a.asking_total|thb }} บาท</td></tr>
-          <tr><td>เนื้อที่</td><td class="num">{{ p.input.area_wah|thb(1) }} ตร.ว.</td></tr>
-          <tr><td>ราคาเสนอขายต่อ ตร.ว.</td><td class="num">{{ a.asking_per_wah|thb }}</td></tr>
-          <tr><td>= กี่เท่าของราคาประเมินที่ทำนาย</td><td class="num fw-semibold">{{ '%.2f'|format(a.ratio_to_predicted) }}×</td></tr>
-          {% if a.ratio_to_actual %}
-          <tr><td>= กี่เท่าของราคาประเมินจริงในช่อง</td><td class="num">{{ '%.2f'|format(a.ratio_to_actual) }}×</td></tr>
-          {% endif %}
-          <tr><td>ราคาประเมินรวม (ทำนาย)</td><td class="num">{{ a.appraisal_total_predicted|thb }} บาท</td></tr>
-        </table>
-        <div class="small text-muted">
-          เกณฑ์: &lt; {{ a.thresholds.medium }}× = ต่ำ, &lt; {{ a.thresholds.high }}× = ปานกลาง, ขึ้นไป = สูง.
-          ราคาประเมินของรัฐมักต่ำกว่าราคาตลาด จึงควรใช้เป็นสัญญาณเบื้องต้นเท่านั้น
-        </div>
-      </div></div>
-    {% elif p.input.area_wah %}
-      <div class="card mb-3"><div class="card-body">
-        <div class="section-title">ราคาประเมินรวม</div>
-        <div class="kpi-value">{{ (reg.predicted * p.input.area_wah)|thb }} <span class="kpi-unit">บาท</span></div>
-        <div class="kpi-sub">{{ p.input.area_wah|thb(1) }} ตร.ว. × {{ reg.predicted|thb }} บาท/ตร.ว.</div>
-      </div></div>
-    {% endif %}
-
-    <div class="card"><div class="card-body">
-      <div class="section-title">ตำแหน่งและช่องข้างเคียง (5 กม.)</div>
-      <div id="result-map" class="map map-sm mb-2"></div>
+    <div class="card h-100"><div class="card-body">
+      <div class="section-title">ราคาพื้นที่ใกล้เคียง (รัศมี 5 กม.)</div>
+      <div id="result-map" class="map map-sm mb-1"></div>
+      <div class="small text-muted mb-2">หมุด = จุดที่คุณเลือก · กรอบดำ = พื้นที่ที่ใช้วิเคราะห์ · สี = ระดับราคา</div>
       <div class="table-responsive">
         <table class="table table-sm table-num mb-0">
-          <thead><tr><th>ช่อง</th><th class="num">ห่าง (กม.)</th><th class="num">บาท/ตร.ว.</th><th>เกรด</th></tr></thead>
+          <thead><tr><th>พื้นที่</th><th class="num">ห่าง</th><th class="num">ราคาประเมิน (บาท/ตร.ว.)</th><th>ระดับ</th></tr></thead>
           <tbody>
           {% for n in p.neighbours %}
-            <tr><td>{{ n.amphoe or n.cell_id }}</td><td class="num">{{ '%.1f'|format(n.distance_km) }}</td>
+            <tr><td>{{ n.amphoe or '–' }}</td><td class="num">{{ '%.1f'|format(n.distance_km) }} กม.</td>
                 <td class="num">{{ n.price_median|thb }}</td><td>{{ grade_badge(n.grade) }}</td></tr>
           {% else %}
-            <tr><td colspan="4" class="text-muted">ไม่มีช่องข้างเคียงในรัศมี 5 กม.</td></tr>
+            <tr><td colspan="4" class="text-muted">ไม่มีพื้นที่ข้างเคียงที่มีข้อมูลในรัศมี 5 กม.</td></tr>
           {% endfor %}
           </tbody>
         </table>
@@ -186,17 +212,37 @@
   </div>
 </div>
 
-<div class="card"><div class="card-body">
-  <div class="section-title">คุณลักษณะของช่องนี้ (features ที่โมเดลใช้)</div>
-  <div class="row">
-    {% for key, value in loc.features.items() %}
-      <div class="col-sm-6 col-lg-4 d-flex justify-content-between border-bottom py-1 small">
-        <span class="text-muted">{{ labels.FEATURE_LABELS.get(key, key) }}</span>
-        <span>{% if value is none %}–{% elif key.endswith('_share') %}{{ value|pct }}{% elif key.endswith('_km') %}{{ '%.1f'|format(value) }}{% else %}{{ value|thb }}{% endif %}</span>
-      </div>
-    {% endfor %}
+{% call tech() %}
+  <div class="row g-3">
+    <div class="col-md-6">
+      <table class="table table-sm small mb-0">
+        <tr><td>พิกัดที่เลือก</td><td>{{ '%.5f'|format(p.input.lat) }}, {{ '%.5f'|format(p.input.lon) }}</td></tr>
+        <tr><td>ช่องกริด 2×2 กม.</td><td>{{ loc.cell_id }}</td></tr>
+        <tr><td>ทำนายราคา (Regression)</td><td>{{ labels.MODEL_NAMES.get(reg.model, reg.model) }} · ช่วงทำนาย 90%</td></tr>
+        <tr><td>จัดเกรด (Classification)</td><td>{{ labels.MODEL_NAMES.get(clf.model, clf.model) }}</td></tr>
+        <tr><td>กลุ่มทำเล (Clustering)</td><td>KMeans → Ward · cluster {{ p.cluster.id }}</td></tr>
+        <tr><td>อธิบายปัจจัย</td><td>Bayesian Network (Expert DAG) · P(PriceLevel | evidence)</td></tr>
+        <tr><td>รุ่นโมเดล</td><td>{{ p.model_version }}</td></tr>
+      </table>
+      {% if bn.impacts %}
+        <div class="small text-muted mt-2">
+          ผลของแต่ละปัจจัย = P(สูง | ทุกปัจจัย) − P(สูง | ทุกปัจจัยยกเว้นปัจจัยนั้น):
+          {% for i in bn.impacts %}{{ labels.BN_VARIABLES[i.variable] }} {{ i.delta|pp }}{{ ' · ' if not loop.last }}{% endfor %}.
+          {% if 'CityProximity' in bn.get('no_effect', []) %}ระยะถึงเมือง d-separated จากราคาเมื่อรู้ ถนน/ระวาง/การใช้ที่ดิน{% endif %}
+        </div>
+      {% endif %}
+    </div>
+    <div class="col-md-6">
+      <div class="small fw-semibold mb-1">ข้อมูลทำเลทั้งหมดที่โมเดลใช้ (features)</div>
+      {% for key, value in f.items() %}
+        <div class="d-flex justify-content-between border-bottom py-1 small">
+          <span class="text-muted">{{ labels.FEATURE_LABELS.get(key, key) }}</span>
+          <span>{% if value is none %}–{% elif key.endswith('_share') %}{{ value|pct }}{% elif key.endswith('_km') %}{{ '%.1f'|format(value) }}{% else %}{{ value|thb }}{% endif %}</span>
+        </div>
+      {% endfor %}
+    </div>
   </div>
-</div></div>
+{% endcall %}
 
 <script id="result-data" type="application/json">{{ {
   'point': [p.input.lat, p.input.lon],
@@ -213,7 +259,7 @@
   const group = L.featureGroup().addTo(map);
   d.neighbours.forEach((n) => {
     L.rectangle(LandMap.cellBounds(n.lat, n.lon), { color: LandMap.GRADE_COLORS[n.grade] || "#888", weight: 1, fillOpacity: 0.25 })
-      .bindTooltip(`${LandMap.fmt(n.price_median)} บาท/ตร.ว. · เกรด ${n.grade}`).addTo(group);
+      .bindTooltip(`${n.amphoe || ""} ${LandMap.fmt(n.price_median)} บาท/ตร.ว. · ${LandMap.GRADE_NAMES[n.grade] || ""}`).addTo(group);
   });
   L.rectangle(LandMap.cellBounds(d.cell[0], d.cell[1]), { color: "#111", weight: 2, fillOpacity: 0.1 }).addTo(group);
   L.marker(d.point).addTo(group);

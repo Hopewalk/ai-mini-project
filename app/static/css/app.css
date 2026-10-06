@@ -38,7 +38,7 @@ body { background: var(--bg); color: var(--ink); }
 
 .card { border: 1px solid var(--line); border-radius: .75rem; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); }
 .card-title { font-weight: 600; }
-.section-title { font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+.section-title { font-size: .85rem; letter-spacing: .02em; text-transform: uppercase; color: var(--muted);
   font-weight: 600; margin-bottom: .5rem; }
 .page-title { font-weight: 700; margin-bottom: .25rem; }
 .lead-muted { color: var(--muted); }
@@ -73,6 +73,7 @@ body { background: var(--bg); color: var(--ink); }
 /* probability bars */
 .prob-row { display: grid; grid-template-columns: minmax(6rem, 9rem) 1fr 3.6rem; gap: .5rem; align-items: center;
   margin-bottom: .35rem; font-size: .9rem; }
+.prob-bars.wide .prob-row { grid-template-columns: minmax(8rem, 15rem) 1fr 3.6rem; }
 .prob-track { background: #edf1f4; border-radius: 1rem; height: .7rem; overflow: hidden; }
 .prob-fill { display: block; height: 100%; background: #9bb7c9; border-radius: 1rem; }
 .prob-row.is-max .prob-fill { background: var(--brand); }
@@ -87,6 +88,55 @@ body { background: var(--bg); color: var(--ink); }
 .delta-neg { color: #b42318; }
 
 .sample-btn { margin: 0 .25rem .4rem 0; }
+
+/* step-by-step forms */
+.step { font-weight: 600; margin-bottom: .5rem; display: flex; align-items: center; gap: .5rem; }
+.step-no { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem;
+  border-radius: 50%; background: var(--brand); color: #fff; font-size: .85rem; flex: none; }
+.optional { font-weight: 400; font-size: .8rem; color: var(--muted); background: #eef1f3; border-radius: 1rem;
+  padding: 0 .5rem; }
+.picked { border: 1px dashed #b9c4ce; border-radius: .5rem; padding: .6rem .75rem; color: var(--muted); }
+.picked.is-set { border-style: solid; border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark);
+  font-weight: 500; }
+.picked.is-invalid { border-color: #b42318; }
+.row + .form-text-row { margin-top: -.75rem; margin-bottom: 1rem; }
+.answer { font-size: 1.15rem; }
+
+/* inline map legend */
+.legend-inline { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-size: .85rem; color: var(--muted); }
+.legend-inline i { display: inline-block; width: 12px; height: 12px; margin-right: 5px; vertical-align: -1px; }
+.legend-inline .sq { border-radius: 2px; opacity: .75; }
+.legend-inline .dot-province { border-radius: 50%; background: #9fd8c6; border: 2px solid #154d40; }
+
+/* plain-language helpers */
+.card-hero { border-top: 4px solid var(--brand); }
+.total-box { background: var(--brand-soft); border-radius: .5rem; padding: .6rem .8rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .75rem; }
+.facts > div { background: #f3f6f5; border-radius: .5rem; padding: .5rem .75rem; }
+.fact-value { display: block; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fact-label { display: block; font-size: .85rem; color: var(--muted); }
+.explainer { background: #fff; border: 1px solid var(--line); border-radius: .75rem; padding: .75rem 1rem; font-size: .9rem; }
+.explainer summary { font-weight: 600; color: var(--brand-dark); cursor: pointer; }
+.explainer[open] summary { margin-bottom: .5rem; }
+.empty-state { border: 2px dashed var(--line); border-radius: .75rem; padding: 3rem 1rem; text-align: center;
+  color: var(--muted); }
+
+/* collapsible technical details */
+.tech { background: #fff; border: 1px solid var(--line); border-radius: .75rem; margin-bottom: 1rem; }
+.tech > summary { padding: .75rem 1rem; cursor: pointer; color: var(--muted); font-weight: 600; }
+.tech > summary:hover { color: var(--ink); }
+.tech[open] > summary { border-bottom: 1px solid var(--line); }
+.tech-body { padding: 1rem; }
+
+/* deed (โฉนด) number guide: same colour on the sample and on its input */
+.deed-sample { font-size: 1.15rem; background: #fbf8ef; border: 1px solid #e8dfc4; border-radius: .5rem;
+  padding: .6rem .8rem; font-variant-numeric: tabular-nums; }
+.deed-part { border-bottom: 3px solid; padding: 0 .1rem; font-weight: 600; }
+.deed-field .form-control, .deed-field .form-select { border-left: 4px solid; }
+.p1 { --deed: #1d4e89; } .p2 { --deed: #2a9d8f; } .p3 { --deed: #c08a1e; } .p4 { --deed: #9467bd; } .p5 { --deed: #d62728; }
+.deed-part, .deed-field .form-control, .deed-field .form-select { border-color: var(--deed); }
+.deed-field .form-control, .deed-field .form-select { border-top-color: var(--bs-border-color);
+  border-right-color: var(--bs-border-color); border-bottom-color: var(--bs-border-color); }
 .plot-img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: .5rem; background: #fff; }
 
 @media (max-width: 576px) {

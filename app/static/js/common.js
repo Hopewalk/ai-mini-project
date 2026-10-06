@@ -1,6 +1,7 @@
 // Shared Leaflet helpers.
 window.LandMap = (function () {
   const GRADE_COLORS = { A: "#1d4e89", B: "#2a9d8f", C: "#c08a1e" };
+  const GRADE_NAMES = { A: "ราคาสูง (A)", B: "ราคากลาง (B)", C: "ราคาต่ำ (C)" };
   const CLUSTER_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2"];
   const HALF_CELL_DEG = 0.009; // ~1 km
 
@@ -35,5 +36,5 @@ window.LandMap = (function () {
     return el ? JSON.parse(el.textContent) : null;
   }
 
-  return { create, cellBounds, fmt, fetchCells, readJson, GRADE_COLORS, CLUSTER_COLORS };
+  return { create, cellBounds, fmt, fetchCells, readJson, GRADE_COLORS, GRADE_NAMES, CLUSTER_COLORS };
 })();

@@ -77,7 +77,7 @@ def test_analyze_location_end_to_end(client):
     assert "บาท/ตร.ว." in page
     assert re.search(r"grade grade-[ABC] lg", page)
     assert re.search(r"risk risk-(Low|Medium|High)", page)
-    assert "What-if" in page
+    assert "ถ้าทำเลเปลี่ยนไป" in page
     # shows up in history
     assert resp.headers["Location"].rsplit("/", 1)[-1] in client.get("/history").get_data(as_text=True)
 
