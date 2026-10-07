@@ -27,7 +27,9 @@
       {% set ep = request.endpoint or '' %}
       <ul class="navbar-nav ms-auto">
         <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('main.') }}" href="{{ url_for('main.index') }}">เช็กราคาจากแผนที่</a></li>
+        {% if show_lookup %}
         <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('lookup.') }}" href="{{ url_for('lookup.parcel') }}">ค้นจากโฉนด</a></li>
+        {% endif %}
         <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('explore.') }}" href="{{ url_for('explore.map_view') }}">แผนที่ราคา</a></li>
         <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('bayes.') }}" href="{{ url_for('bayes.query') }}">ลองสมมติทำเล</a></li>
         <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('dashboard.') }}" href="{{ url_for('dashboard.index') }}">ระบบแม่นแค่ไหน</a></li>

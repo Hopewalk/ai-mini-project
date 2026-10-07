@@ -20,3 +20,7 @@ class Config:
 
     HISTORY_PAGE_SIZE = 20
     MAP_CELL_LIMIT = 8000
+
+    # parcel lookup by deed number: hidden from the menu for now (route and code kept).
+    # Set SHOW_PARCEL_LOOKUP=1 in .env to show it again.
+    SHOW_PARCEL_LOOKUP = os.getenv("SHOW_PARCEL_LOOKUP", "0") == "1"

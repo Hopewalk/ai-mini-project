@@ -73,4 +73,5 @@ def _register_template_helpers(app):
             "provinces": PROVINCES,
             "model_ready": ml_service.ready,
             "model_version": app.config["MODEL_VERSION"],
+            "show_lookup": app.config["SHOW_PARCEL_LOOKUP"],
         }
