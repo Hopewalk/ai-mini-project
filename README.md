@@ -1,14 +1,13 @@
 # Thailand Land Appraisal Analytics
 
 ทำนายและอธิบายราคาประเมินที่ดิน (กรมธนารักษ์) ด้วย Regression · Classification · Clustering · Bayesian Network
-รายละเอียดการออกแบบและผลลัพธ์: [spec.md](spec.md)
 
 ## Tooling
 
 | เครื่องมือ | ใช้ทำอะไร | ไฟล์ |
 |---|---|---|
-| [Poetry](https://python-poetry.org) 2.x | Python dependencies + virtualenv (`.venv` ในโปรเจกต์) | `pyproject.toml`, `poetry.lock`, `poetry.toml` |
-| [pnpm](https://pnpm.io) | Frontend assets (Bootstrap, Leaflet, ฟอนต์ IBM Plex Sans Thai) → `app/static/vendor` + task shortcuts | `package.json`, `pnpm-lock.yaml` |
+| [Poetry](https://python-poetry.org) 2.x | Python dependencies | `pyproject.toml`, `poetry.lock`, `poetry.toml` |
+| [pnpm](https://pnpm.io) | Frontend assets | `package.json`, `pnpm-lock.yaml` |
 
 ติดตั้ง (ครั้งแรกครั้งเดียว, ไม่ต้องใช้สิทธิ์ admin):
 
